@@ -1,5 +1,9 @@
 class PhoneNumberObject {
-  PhoneNumberObject({this.phoneNumber});
+  PhoneNumberObject({
+    required this.phoneNumberWithFormating,
+    required this.phoneNumberWithoutFormating,
+  });
 
-  String? phoneNumber;
+  String phoneNumberWithFormating;
+  String phoneNumberWithoutFormating;
 }

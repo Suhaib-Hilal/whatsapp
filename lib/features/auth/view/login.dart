@@ -3,6 +3,7 @@ import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:phone_number/phone_number.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -45,7 +46,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
-        title: const Text("Enter your phone number"),
+        title: const Center(child: Text("Enter your phone number")),
         backgroundColor: AppColorsDark.appBarColor,
       ),
       body: Column(
@@ -300,17 +301,33 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                     TextButton(
                                       onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                VerificationPage(
-                                              phoneNumber: PhoneNumberObject(
-                                                phoneNumber:
-                                                    "+${countryPhoneCodeController.text} ${phoneNumberController.text}",
-                                              ),
-                                            ),
-                                          ),
-                                        );
+                                        String phoneNumberWithFormating =
+                                            "+${countryPhoneCodeController.text}${phoneNumberController.text}";
+                                        String phoneNumber =
+                                            phoneNumberController.text
+                                                .replaceAll("-", "")
+                                                .replaceAll(" ", "")
+                                                .replaceAll("(", "")
+                                                .replaceAll(")", "");
+                                        phoneNumber =
+                                            "+${countryPhoneCodeController.text}$phoneNumber";
+
+                                        if (!mounted) return;
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      VerificationPage(
+                                                    phoneNumber:
+                                                        PhoneNumberObject(
+                                                      phoneNumberWithFormating:
+                                                          phoneNumberWithFormating,
+                                                      phoneNumberWithoutFormating:
+                                                          phoneNumber,
+                                                    ),
+                                                  ),
+                                                ),
+                                                (route) => false);
                                       },
                                       child: const Text(
                                         "OK",
@@ -402,6 +419,18 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+Future<void> sendOtp(String phoneNumber, Function(String) onCodeSent) async {
+  await FirebaseAuth.instance.verifyPhoneNumber(
+    phoneNumber: phoneNumber,
+    verificationCompleted: (PhoneAuthCredential credential) {},
+    verificationFailed: (FirebaseAuthException e) {},
+    codeSent: (String verificationId, int? resendToken) async {
+      onCodeSent(verificationId);
+    },
+    codeAutoRetrievalTimeout: (String verificationId) {},
+  );
+}
+
 class VerificationPage extends StatefulWidget {
   final PhoneNumberObject phoneNumber;
 
@@ -412,30 +441,182 @@ class VerificationPage extends StatefulWidget {
 }
 
 class _VerificationPageState extends State<VerificationPage> {
-  TextEditingController firstOtpDigitController = TextEditingController();
-  FocusNode firstFocusNode = FocusNode();
+  final focusNodes = List.generate(6, (index) => FocusNode());
+  late List<SizedBox> textFields;
+  String verificationId = "";
+  String code = "";
 
-  TextEditingController secondOtpDigitController = TextEditingController();
-  FocusNode secondFocusNode = FocusNode();
+  @override
+  void initState() {
+    focusNodes[0].requestFocus();
+    textFields = List.generate(6, (index) {
+      return SizedBox(
+        width: 20,
+        height: 20,
+        child: TextField(
+          onChanged: (value) {
+            setState(() {});
+            if (value.isEmpty) {
+              if (index != 0) {
+                focusNodes[index - 1].requestFocus();
+                setState(() => code = code.substring(index));
+              }
+            } else {
+              if (index == 5) {
+                code += value;
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return FutureBuilder(
+                      future: verifyOtp(code),
+                      builder: (context, snapshot) {
+                        String? text;
+                        Widget? icon;
 
-  TextEditingController thirdOtpDigitController = TextEditingController();
-  FocusNode thirdFocusNode = FocusNode();
+                        if (snapshot.hasData) {
+                          text = "Verification Complete";
+                          icon = Container(
+                            decoration: const BoxDecoration(
+                                // color: AppColorsDark.greenColor,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30))),
+                            // height: 30,
+                            // width: 30,
+                            child: const Icon(
+                              Icons.check_circle,
+                              color: AppColorsDark.greenColor,
+                              size: 30,
+                            ),
+                          );
+                          Future.delayed(const Duration(seconds: 2), () {
+                            Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const UserProfilePage(),
+                                ),
+                                (route) => false);
+                          });
+                        } else if (snapshot.hasError) {
+                          text = "Invalid OTP";
+                          icon = Container(
+                            decoration: const BoxDecoration(
+                                color: AppColorsDark.errorSnackBarColor,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(30))),
+                            height: 30,
+                            width: 30,
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: AppColorsDark.appBarColor,
+                            ),
+                          );
+                          Future.delayed(const Duration(seconds: 2), () {
+                            Navigator.of(context).pop();
+                          });
+                        }
 
-  TextEditingController fouthOtpDigitController = TextEditingController();
-  FocusNode fouthFocusNode = FocusNode();
+                        return AlertDialog(
+                          actionsPadding: const EdgeInsets.all(0),
+                          backgroundColor: AppColorsDark.appBarColor,
+                          content: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                height: 30,
+                                width: 30,
+                                child: icon ??
+                                    const CircularProgressIndicator(
+                                      color: AppColorsDark.indicatorColor,
+                                    ),
+                              ),
+                              const SizedBox(
+                                width: 20,
+                              ),
+                              Text(
+                                text ?? "Connecting",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  color: AppColorsDark.textColor1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+                return;
+              }
+              code += value;
+              focusNodes[index + 1].requestFocus();
+            }
+          },
+          textAlign: TextAlign.center,
+          focusNode: focusNodes[index],
+          maxLength: 1,
+          style: const TextStyle(
+            color: AppColorsDark.textColor1,
+            fontSize: 20,
+          ),
+          keyboardType: const TextInputType.numberWithOptions(),
+          decoration: const InputDecoration(
+            hintText: " -",
+            hintStyle: TextStyle(
+              color: AppColorsDark.textColor1,
+              fontSize: 20,
+            ),
+            counterText: "",
+            border: InputBorder.none,
+          ),
+        ),
+      );
+    });
 
-  TextEditingController fifthOtpDigitController = TextEditingController();
-  FocusNode fifthFocusNode = FocusNode();
+    sendOtp(widget.phoneNumber.phoneNumberWithoutFormating, (vId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          "OTP SENT!",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        backgroundColor: AppColorsDark.greenColor,
+        behavior: SnackBarBehavior.floating,
+      ));
+      setState(() => verificationId = vId);
+    });
 
-  TextEditingController sixthOtpDigitController = TextEditingController();
-  FocusNode sixthFocusNode = FocusNode();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    for (var focusNode in focusNodes) {
+      focusNode.dispose();
+    }
+
+    super.dispose();
+  }
+
+  Future<void> verifyOtp(String smsCode) async {
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+
+    return await FirebaseAuth.instance
+        .signInWithCredential(credential)
+        .then((value) => true);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
-        title: const Text("Verifying your number"),
+        title: const Center(child: Text("Verifying your number")),
         backgroundColor: AppColorsDark.appBarColor,
       ),
       body: Container(
@@ -451,7 +632,7 @@ class _VerificationPageState extends State<VerificationPage> {
               textAlign: TextAlign.center,
               text: TextSpan(
                 text:
-                    'Waiting to automatically detect an SMS sent to ${widget.phoneNumber.phoneNumber} ',
+                    'Waiting to automatically detect an SMS sent to ${widget.phoneNumber.phoneNumberWithoutFormating} ',
                 children: const <TextSpan>[
                   TextSpan(
                     text: "Wrong Number?",
@@ -469,172 +650,16 @@ class _VerificationPageState extends State<VerificationPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value != "" ? secondFocusNode.requestFocus() : null;
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: firstFocusNode,
-                          autofocus: true,
-                          textAlign: TextAlign.center,
-                          controller: firstOtpDigitController,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: textFields.sublist(0, 3),
                       ),
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value != ""
-                                ? thirdFocusNode.requestFocus()
-                                : firstFocusNode.requestFocus();
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: secondFocusNode,
-                          textAlign: TextAlign.center,
-                          controller: secondOtpDigitController,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
+                      const SizedBox(
+                        width: 10,
                       ),
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value != ""
-                                ? fouthFocusNode.requestFocus()
-                                : secondFocusNode.requestFocus();
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: thirdFocusNode,
-                          textAlign: TextAlign.center,
-                          controller: thirdOtpDigitController,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value != ""
-                                ? fifthFocusNode.requestFocus()
-                                : thirdFocusNode.requestFocus();
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: fouthFocusNode,
-                          textAlign: TextAlign.center,
-                          controller: fouthOtpDigitController,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value != ""
-                                ? sixthFocusNode.requestFocus()
-                                : fouthFocusNode.requestFocus();
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: fifthFocusNode,
-                          textAlign: TextAlign.center,
-                          controller: fifthOtpDigitController,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 20,
-                        height: 60,
-                        child: TextField(
-                          onChanged: (value) {
-                            value == "" ? fifthFocusNode.requestFocus() : null;
-                          },
-                          keyboardType: const TextInputType.numberWithOptions(),
-                          focusNode: sixthFocusNode,
-                          textAlign: TextAlign.center,
-                          controller: sixthOtpDigitController,
-                          style: const TextStyle(
-                            color: AppColorsDark.textColor1,
-                            fontSize: 38,
-                          ),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "-",
-                            counterText: "",
-                            hintStyle: TextStyle(
-                              color: AppColorsDark.textColor1,
-                              fontSize: 38,
-                            ),
-                          ),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: textFields.sublist(3),
                       ),
                     ],
                   ),
@@ -683,6 +708,52 @@ class _VerificationPageState extends State<VerificationPage> {
         ),
       ),
     );
+  }
+}
+
+class UserProfilePage extends StatefulWidget {
+  const UserProfilePage({super.key});
+
+  @override
+  State<UserProfilePage> createState() => _UserProfilePageState();
+}
+
+class _UserProfilePageState extends State<UserProfilePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: AppColorsDark.backgroundColor,
+        appBar: AppBar(
+          title: const Center(child: Text("Profile info")),
+          backgroundColor: AppColorsDark.appBarColor,
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "Please provide your name and an optional profile photo",
+                  style: TextStyle(
+                    color: AppColorsDark.textColor1,
+                  ),
+                ),
+                CircleAvatar(
+                  radius: 50,
+                )
+              ],
+            ),
+            ElevatedButton(
+                onPressed: () {},
+                style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all(AppColorsDark.greenColor),
+                  foregroundColor: MaterialStateProperty.all(Colors.black),
+                ),
+                child: const Text("NEXT")),
+          ],
+        ));
   }
 }
 
