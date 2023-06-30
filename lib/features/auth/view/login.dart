@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
@@ -445,6 +447,11 @@ class _VerificationPageState extends State<VerificationPage> {
   late List<SizedBox> textFields;
   String verificationId = "";
   String code = "";
+  int initialTime = 60;
+  int currentTime = 60;
+  Color color = AppColorsDark.greyColor;
+  int resendCount = 1;
+  Timer timer = Timer(const Duration(microseconds: 1), () => ());
 
   @override
   void initState() {
@@ -572,7 +579,15 @@ class _VerificationPageState extends State<VerificationPage> {
       );
     });
 
+    sendNewOtp();
+
+    super.initState();
+  }
+
+  void sendNewOtp() {
     sendOtp(widget.phoneNumber.phoneNumberWithoutFormating, (vId) {
+      setTimer();
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
           "OTP SENT!",
@@ -587,8 +602,19 @@ class _VerificationPageState extends State<VerificationPage> {
       ));
       setState(() => verificationId = vId);
     });
+  }
 
-    super.initState();
+  void setTimer() {
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      timer.tick;
+      currentTime--;
+      if (currentTime == 0) {
+        currentTime = initialTime * resendCount * 5;
+        timer.cancel();
+      }
+      setState(() {});
+    });
+    resendCount++;
   }
 
   @override
@@ -596,7 +622,7 @@ class _VerificationPageState extends State<VerificationPage> {
     for (var focusNode in focusNodes) {
       focusNode.dispose();
     }
-
+    timer.cancel();
     super.dispose();
   }
 
@@ -676,22 +702,33 @@ class _VerificationPageState extends State<VerificationPage> {
                 color: AppColorsDark.textColor1,
               ),
             ),
-            const ListTile(
-              titleAlignment: ListTileTitleAlignment.center,
+            ListTile(
               leading: Icon(
                 Icons.message_sharp,
-                color: AppColorsDark.greyColor,
+                color: timer.isActive
+                    ? AppColorsDark.greyColor
+                    : AppColorsDark.greenColor,
               ),
-              title: Text(
-                "Resend SMS",
-                style: TextStyle(
-                  color: AppColorsDark.greyColor,
-                  fontSize: 14,
+              title: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  child: Text(
+                    "Resend SMS",
+                    style: TextStyle(
+                      color: timer.isActive
+                          ? AppColorsDark.greyColor
+                          : AppColorsDark.greenColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onPressed: () {
+                    sendNewOtp();
+                  },
                 ),
               ),
               trailing: Text(
-                "10:00",
-                style: TextStyle(
+                timer.isActive ? formattedTime(currentTime) : "",
+                style: const TextStyle(
                   color: AppColorsDark.greyColor,
                   fontSize: 14,
                 ),
@@ -708,6 +745,25 @@ class _VerificationPageState extends State<VerificationPage> {
         ),
       ),
     );
+  }
+
+  String formattedTime(int time) {
+    int hours = 0;
+    int minutes = time ~/ 60;
+    int seconds = time % 60;
+
+    if (minutes > 60) {
+      hours = minutes ~/ 60;
+      minutes = minutes % 60;
+    }
+
+    String hoursStr = hours < 10 ? "0$hours" : "$hours";
+    String minuteStr = minutes < 10 ? "0$minutes" : "$minutes";
+    String secondsStr = seconds < 10 ? "0$seconds" : "$seconds";
+
+    return ([hoursStr, minuteStr, secondsStr]
+          ..removeWhere((str) => str == "00"))
+        .join(":");
   }
 }
 
