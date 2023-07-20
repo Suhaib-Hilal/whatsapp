@@ -158,14 +158,14 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
-  List<User> onWhatsapp = [];
-  bool isRefreshing = false;
   bool isSearching = false;
   Future<(List<User>, List<Contact>)> contactsFuture = getContactsInfo();
   TextEditingController contactSearchingController =
       TextEditingController(text: "");
   final shareMsg =
       "Let's chat on WhatsApp! It's a fast, simple and secure app we can use to message and call each other for free. Get it at https://github.com/Suhaib-Hilal/whatsapp.git";
+  final contactsHelpUrl =
+      "https://faq.whatsapp.com/cxt?entrypointid=missingcontacts&lg=en&lc=US&platform=android&anid=a223fcbb-4143-4961-bdb4-018ea1aac96c";
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +279,21 @@ class _ContactsPageState extends State<ContactsPage> {
                       border: InputBorder.none,
                     ),
                   ),
-            onWhatsapp.isNotEmpty && !isSearching
-                ? Text(
-                    "${onWhatsapp.length} contacts",
-                    style: const TextStyle(fontSize: 14),
-                  )
-                : const SizedBox(height: 8),
+            FutureBuilder(
+              future: contactsFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || isSearching) {
+                  return const SizedBox(height: 8);
+                }
+
+                final (contactsOnWhatsapp, _) = snapshot.data!;
+
+                return Text(
+                  "${contactsOnWhatsapp.length} contacts",
+                  style: const TextStyle(fontSize: 14),
+                );
+              },
+            ),
           ],
         ),
         actions: [
@@ -293,17 +302,21 @@ class _ContactsPageState extends State<ContactsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                !isRefreshing
-                    ? const SizedBox(
-                        width: 20,
-                      )
-                    : const SizedBox(
+                FutureBuilder(
+                  future: contactsFuture,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
                           color: AppColorsDark.greenColor,
                         ),
-                      ),
+                      );
+                    }
+                    return const SizedBox(width: 20);
+                  },
+                ),
                 GestureDetector(
                   child: !isSearching
                       ? const Icon(Icons.search_rounded)
@@ -319,6 +332,24 @@ class _ContactsPageState extends State<ContactsPage> {
                       Icons.more_vert_rounded,
                       color: AppColorsDark.textColor1,
                     ),
+                    onSelected: (value) async {
+                      switch (value) {
+                        case 0:
+                          Share.share(shareMsg);
+                          break;
+                        case 1:
+                          FlutterContacts.openExternalPick();
+                          break;
+                        case 2:
+                          setState(() {
+                            contactsFuture = getContactsInfo();
+                          });
+                          break;
+                        case 3:
+                          launchUrl(Uri.parse(contactsHelpUrl));
+                          break;
+                      }
+                    },
                     itemBuilder: (context) {
                       final textStyle =
                           Theme.of(context).textTheme.bodySmall!.copyWith(
@@ -390,19 +421,6 @@ class _ContactsPageState extends State<ContactsPage> {
 
                 if (snapshot.hasData) {
                   (contactsOnWhatsapp, contactsNotOnWhatsapp) = snapshot.data!;
-
-                  WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                    setState(() {
-                      isRefreshing = false;
-                      onWhatsapp = contactsOnWhatsapp;
-                    });
-                  });
-                }
-
-                if (!snapshot.hasData) {
-                  WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                    setState(() => isRefreshing = true);
-                  });
                 }
 
                 if (contactsOnWhatsapp.isNotEmpty) {
@@ -682,8 +700,6 @@ class _ContactsPageState extends State<ContactsPage> {
               ),
               child: GestureDetector(
                 onTap: () {
-                  const contactsHelpUrl =
-                      "https://faq.whatsapp.com/cxt?entrypointid=missingcontacts&lg=en&lc=US&platform=android&anid=a223fcbb-4143-4961-bdb4-018ea1aac96c";
                   launchUrl(Uri.parse(contactsHelpUrl));
                 },
                 child: Row(
