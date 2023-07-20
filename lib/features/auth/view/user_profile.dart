@@ -1,11 +1,20 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:whatsappclone/shared/firebase_storage.dart';
+import 'package:whatsappclone/shared/firestore_db.dart';
+import 'package:whatsappclone/shared/user.dart';
 import '../../../theme/color_theme.dart';
+import '../model/phone_number.dart';
+import 'home_page.dart';
 
 class UserProfilePage extends StatefulWidget {
-  const UserProfilePage({super.key});
+  final PhoneNumber phone;
+
+  const UserProfilePage({super.key, required this.phone});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -33,6 +42,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
         title: const Center(child: Text("Profile info")),
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: AppColorsDark.appBarColor,
+            statusBarIconBrightness: Brightness.light),
         backgroundColor: AppColorsDark.appBarColor,
         elevation: 0,
       ),
@@ -205,7 +217,98 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 padding: const EdgeInsets.only(bottom: 24),
                 width: 130,
                 child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return FutureBuilder(
+                            future: addUserInfo(usernameController.text,
+                                selectedImage, widget.phone),
+                            builder: (context, snapshot) {
+                              String? text;
+                              Widget? icon;
+
+                              if (snapshot.hasData) {
+                                text = "You are all set";
+                                icon = Container(
+                                  decoration: const BoxDecoration(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(30),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_circle,
+                                    color: AppColorsDark.greenColor,
+                                    size: 30,
+                                  ),
+                                );
+                                Future.delayed(
+                                  const Duration(seconds: 1),
+                                  () {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const InitializingPage(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  },
+                                );
+                              } else if (snapshot.hasError) {
+                                text = "Oops, an error occured";
+                                icon = Container(
+                                  decoration: const BoxDecoration(
+                                    color: AppColorsDark.errorSnackBarColor,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(30),
+                                    ),
+                                  ),
+                                  height: 30,
+                                  width: 30,
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    color: AppColorsDark.appBarColor,
+                                  ),
+                                );
+                                Future.delayed(
+                                  const Duration(seconds: 2),
+                                  () {
+                                    Navigator.of(context).pop();
+                                  },
+                                );
+                              }
+                              return AlertDialog(
+                                actionsPadding: const EdgeInsets.all(0),
+                                backgroundColor: AppColorsDark.appBarColor,
+                                content: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      height: 30,
+                                      width: 30,
+                                      child: icon ??
+                                          const CircularProgressIndicator(
+                                            color: AppColorsDark.indicatorColor,
+                                          ),
+                                    ),
+                                    const SizedBox(
+                                      width: 20,
+                                    ),
+                                    Text(
+                                      text ?? "Connecting",
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        color: AppColorsDark.textColor1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
                     style: ButtonStyle(
                       backgroundColor:
                           MaterialStateProperty.all(AppColorsDark.greenColor),
@@ -219,6 +322,32 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ),
     );
   }
+}
+
+Future<void> addUserInfo(
+  String username,
+  File? selectedImage,
+  PhoneNumber phone,
+) async {
+  if (username.isEmpty) return;
+
+  final id = auth.FirebaseAuth.instance.currentUser!.uid;
+  String avatarUrl = 'http://www.gravatar.com/avatar/?d=mp';
+
+  if (selectedImage != null) {
+    avatarUrl = await FirebaseStorageUtil.uploadFile(
+      "userAvatars/$id",
+      selectedImage,
+    );
+  }
+
+  User user = User(
+    name: username,
+    id: id,
+    avatarUrl: avatarUrl,
+    phone: phone,
+  );
+  return await FirestoreDatabase.registerUser(user).then((value) => true);
 }
 
 class PhotoOption extends StatelessWidget {
@@ -286,5 +415,59 @@ class PhotoOption extends StatelessWidget {
       return ImageSource.camera;
     }
     return ImageSource.gallery;
+  }
+}
+
+class InitializingPage extends StatefulWidget {
+  const InitializingPage({super.key});
+
+  @override
+  State<InitializingPage> createState() => _InitializingPageState();
+}
+
+class _InitializingPageState extends State<InitializingPage> {
+  @override
+  void initState() {
+    Future.delayed(
+      const Duration(seconds: 2),
+      () {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const HomePage(),
+          ),
+          (route) => false,
+        );
+      },
+    );
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppColorsDark.backgroundColor,
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: 50),
+            child: Text(
+              "Initializing",
+              style: TextStyle(
+                color: AppColorsDark.textColor2,
+                fontSize: 30,
+              ),
+            ),
+          ),
+          Image(
+            image: AssetImage('assets/images/landing_img.png'),
+            color: AppColorsDark.greenColor,
+            height: 250,
+            width: 1140,
+          ),
+          CircularProgressIndicator(color: AppColorsDark.greenColor),
+        ],
+      ),
+    );
   }
 }

@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
 import 'package:country_picker/country_picker.dart';
-import 'package:phone_number/phone_number.dart';
+import 'package:phone_number/phone_number.dart' as phone;
 
 import 'country_picker.dart';
 import 'verification.dart';
@@ -50,6 +51,11 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: AppColorsDark.appBarColor,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppColorsDark.backgroundColor,
+        ),
         title: const Center(child: Text("Enter your phone number")),
         backgroundColor: AppColorsDark.appBarColor,
       ),
@@ -229,7 +235,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 150,
               child: ElevatedButton(
                   onPressed: () async {
-                    final isValid = await PhoneNumberUtil().validate(
+                    final isValid = await phone.PhoneNumberUtil().validate(
                       phoneNumberController.text,
                       regionCode: selectedCountry.countryCode,
                     );
@@ -314,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
                                                 .replaceAll("(", "")
                                                 .replaceAll(")", "");
                                         phoneNumber =
-                                            "+${countryPhoneCodeController.text}$phoneNumber";
+                                            "+${countryPhoneCodeController.text} $phoneNumber";
 
                                         if (!mounted) return;
                                         Navigator.of(context)
@@ -322,8 +328,7 @@ class _LoginPageState extends State<LoginPage> {
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                       VerificationPage(
-                                                    phoneNumber:
-                                                        PhoneNumberObject(
+                                                    phoneNumber: PhoneNumber(
                                                       phoneNumberWithFormating:
                                                           phoneNumberWithFormating,
                                                       phoneNumberWithoutFormating:
@@ -406,6 +411,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
   Future<void> formatPhoneNumber(Country country) async {
     final phoneNumber = phoneNumberController.text
         .replaceAll("-", "")
@@ -413,7 +419,7 @@ class _LoginPageState extends State<LoginPage> {
         .replaceAll("(", "")
         .replaceAll(")", "");
 
-    final formatted = await PhoneNumberUtil().format(
+    final formatted = await phone.PhoneNumberUtil().format(
       phoneNumber,
       country.countryCode,
     );

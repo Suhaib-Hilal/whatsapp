@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
 import '../../../utils/abc.dart';
 import 'user_profile.dart';
 
 class VerificationPage extends StatefulWidget {
-  final PhoneNumberObject phoneNumber;
+  final PhoneNumber phoneNumber;
 
   const VerificationPage({super.key, required this.phoneNumber});
 
@@ -69,13 +70,17 @@ class _VerificationPageState extends State<VerificationPage> {
                               size: 30,
                             ),
                           );
-                          Future.delayed(const Duration(seconds: 2), () {
-                            Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (context) => const UserProfilePage(),
-                                ),
-                                (route) => false);
-                          });
+                          Future.delayed(
+                            const Duration(seconds: 2),
+                            () {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => UserProfilePage(
+                                        phone: widget.phoneNumber),
+                                  ),
+                                  (route) => false);
+                            },
+                          );
                         } else if (snapshot.hasError) {
                           text = "Invalid OTP";
                           icon = Container(
@@ -90,9 +95,12 @@ class _VerificationPageState extends State<VerificationPage> {
                               color: AppColorsDark.appBarColor,
                             ),
                           );
-                          Future.delayed(const Duration(seconds: 2), () {
-                            Navigator.of(context).pop();
-                          });
+                          Future.delayed(
+                            const Duration(seconds: 2),
+                            () {
+                              Navigator.of(context).pop();
+                            },
+                          );
                         }
 
                         return AlertDialog(
@@ -217,6 +225,11 @@ class _VerificationPageState extends State<VerificationPage> {
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
         title: const Center(child: Text("Verifying your number")),
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: AppColorsDark.appBarColor,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppColorsDark.backgroundColor,
+        ),
         backgroundColor: AppColorsDark.appBarColor,
       ),
       body: Container(
