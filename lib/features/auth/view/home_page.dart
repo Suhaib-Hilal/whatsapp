@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
 import 'package:whatsappclone/theme/color_theme.dart';
@@ -162,6 +164,8 @@ class _ContactsPageState extends State<ContactsPage> {
   Future<(List<User>, List<Contact>)> contactsFuture = getContactsInfo();
   TextEditingController contactSearchingController =
       TextEditingController(text: "");
+  final shareMsg =
+      "Let's chat on WhatsApp! It's a fast, simple and secure app we can use to message and call each other for free. Get it at https://github.com/Suhaib-Hilal/whatsapp.git";
 
   @override
   Widget build(BuildContext context) {
@@ -290,13 +294,16 @@ class _ContactsPageState extends State<ContactsPage> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 !isRefreshing
-                    ? const SizedBox()
-                    : const CircularProgressIndicator(
-                        color: AppColorsDark.greenColor,
+                    ? const SizedBox(
+                        width: 20,
+                      )
+                    : const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColorsDark.greenColor,
+                        ),
                       ),
-                const SizedBox(
-                  width: 10,
-                ),
                 GestureDetector(
                   child: !isSearching
                       ? const Icon(Icons.search_rounded)
@@ -305,9 +312,57 @@ class _ContactsPageState extends State<ContactsPage> {
                     setState(() => isSearching = true);
                   },
                 ),
-                !isSearching
-                    ? const Icon(Icons.more_vert_rounded)
-                    : const SizedBox(),
+                if (!isSearching)
+                  PopupMenuButton(
+                    color: AppColorsDark.appBarColor,
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      color: AppColorsDark.textColor1,
+                    ),
+                    itemBuilder: (context) {
+                      final textStyle =
+                          Theme.of(context).textTheme.bodySmall!.copyWith(
+                                color: Colors.white,
+                                fontSize: 16,
+                              );
+                      return [
+                        PopupMenuItem<int>(
+                          value: 0,
+                          height: 40,
+                          child: Text(
+                            "Invite a friend",
+                            style: textStyle,
+                          ),
+                        ),
+                        PopupMenuItem<int>(
+                          value: 1,
+                          height: 40,
+                          child: Text(
+                            "Contacts",
+                            style: textStyle,
+                          ),
+                        ),
+                        PopupMenuItem<int>(
+                          value: 2,
+                          height: 40,
+                          child: Text(
+                            "Refresh",
+                            style: textStyle,
+                          ),
+                        ),
+                        PopupMenuItem<int>(
+                          value: 3,
+                          height: 40,
+                          child: Text(
+                            "Help",
+                            style: textStyle,
+                          ),
+                        ),
+                      ];
+                    },
+                  )
+                else
+                  const SizedBox(),
               ],
             ),
           )
@@ -507,8 +562,6 @@ class _ContactsPageState extends State<ContactsPage> {
                             ),
                             TextButton(
                               onPressed: () {
-                                const shareMsg =
-                                    "Let's chat on WhatsApp! It's a fast, simple and secure app we can use to message and call each other for free. Get it at https://github.com/Suhaib-Hilal/whatsapp.git";
                                 sendMessage(
                                   contact.phones[0].normalizedNumber,
                                   shareMsg,
@@ -590,28 +643,33 @@ class _ContactsPageState extends State<ContactsPage> {
                 right: 10,
                 left: 16,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      color: AppColorsDark.appBarColor,
+              child: GestureDetector(
+                onTap: () {
+                  Share.share(shareMsg);
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(50),
+                        color: AppColorsDark.appBarColor,
+                      ),
+                      child: const Icon(
+                        Icons.share,
+                        color: AppColorsDark.iconColor,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.share,
-                      color: AppColorsDark.iconColor,
+                    const SizedBox(width: 20),
+                    const Text(
+                      "Share invite link",
+                      style: TextStyle(
+                        color: AppColorsDark.textColor1,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 20),
-                  const Text(
-                    "Share invite link",
-                    style: TextStyle(
-                      color: AppColorsDark.textColor1,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(
@@ -622,28 +680,35 @@ class _ContactsPageState extends State<ContactsPage> {
                 right: 10,
                 left: 16,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      color: AppColorsDark.appBarColor,
+              child: GestureDetector(
+                onTap: () {
+                  const contactsHelpUrl =
+                      "https://faq.whatsapp.com/cxt?entrypointid=missingcontacts&lg=en&lc=US&platform=android&anid=a223fcbb-4143-4961-bdb4-018ea1aac96c";
+                  launchUrl(Uri.parse(contactsHelpUrl));
+                },
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(50),
+                        color: AppColorsDark.appBarColor,
+                      ),
+                      child: const Icon(
+                        Icons.question_mark_rounded,
+                        color: AppColorsDark.iconColor,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.question_mark_rounded,
-                      color: AppColorsDark.iconColor,
+                    const SizedBox(width: 20),
+                    const Text(
+                      "Contacts help",
+                      style: TextStyle(
+                        color: AppColorsDark.textColor1,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 20),
-                  const Text(
-                    "Contacts help",
-                    style: TextStyle(
-                      color: AppColorsDark.textColor1,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
