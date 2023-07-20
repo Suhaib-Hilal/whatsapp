@@ -507,8 +507,12 @@ class _ContactsPageState extends State<ContactsPage> {
                             ),
                             TextButton(
                               onPressed: () {
-                                sendMessage(contact.phones[0].normalizedNumber,
-                                    "Testing...");
+                                const shareMsg =
+                                    "Let's chat on WhatsApp! It's a fast, simple and secure app we can use to message and call each other for free. Get it at https://github.com/Suhaib-Hilal/whatsapp.git";
+                                sendMessage(
+                                  contact.phones[0].normalizedNumber,
+                                  shareMsg,
+                                );
                               },
                               child: const Text(
                                 "Invite",

@@ -19,11 +19,5 @@ String formattedTime(int time) {
 }
 
 void sendMessage(String phoneNumber, String message) async {
-  final url = 'sms:$phoneNumber?body=${Uri.encodeComponent(message)}';
-
-  if (await canLaunchUrl(Uri(path: url))) {
-    await launchUrl(Uri(path: url));
-  } else {
-    throw 'Could not launch $url';
-  }
+  await launchUrl(Uri.parse('sms:$phoneNumber?body=$message'));
 }
