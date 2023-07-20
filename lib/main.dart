@@ -25,14 +25,11 @@ class WhatsApp extends StatelessWidget {
       home: StreamBuilder(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const HomePage();
-            // return Container(
-            //   color: Colors.red,
-            // );
+          if (snapshot.data == null) {
+            return const WelcomePage();
           }
-          final user = snapshot.data;
-          if (user == null) return const WelcomePage();
+
+          // final user = snapshot.data;
           return const HomePage();
         },
       ),
