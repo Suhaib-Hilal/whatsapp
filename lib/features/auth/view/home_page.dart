@@ -461,40 +461,49 @@ class _ContactsPageState extends State<ContactsPage> {
                         );
                   })) {
                     abc.add(
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: AppColorsDark.dividerColor,
-                              foregroundImage: contact.avatarUrl.isNotEmpty
-                                  ? NetworkImage(contact.avatarUrl)
-                                  : null,
-                              child: contact.avatarUrl.isEmpty
-                                  ? const Icon(Icons.person)
-                                  : null,
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ChatPage(user: contact),
                             ),
-                            const SizedBox(width: 20),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  contact.name,
-                                  style: const TextStyle(
-                                    color: AppColorsDark.textColor1,
-                                    fontSize: 16,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: AppColorsDark.dividerColor,
+                                foregroundImage: contact.avatarUrl.isNotEmpty
+                                    ? NetworkImage(contact.avatarUrl)
+                                    : null,
+                                child: contact.avatarUrl.isEmpty
+                                    ? const Icon(Icons.person)
+                                    : null,
+                              ),
+                              const SizedBox(width: 20),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    contact.name,
+                                    style: const TextStyle(
+                                      color: AppColorsDark.textColor1,
+                                      fontSize: 16,
+                                    ),
                                   ),
-                                ),
-                                const Text(
-                                  "Hey there, I am using whatsapp.",
-                                  style: TextStyle(
-                                    color: AppColorsDark.greyColor,
+                                  const Text(
+                                    "Hey there, I am using whatsapp.",
+                                    style: TextStyle(
+                                      color: AppColorsDark.greyColor,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -753,4 +762,196 @@ Future<(List<User>, List<Contact>)> getContactsInfo() async {
     }
   }
   return (contactsOnWhatsapp, contactsNotOnWhatsapp);
+}
+
+class ChatPage extends StatefulWidget {
+  final User user;
+  const ChatPage({super.key, required this.user});
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  TextEditingController messageTextController = TextEditingController(text: "");
+  int maxLines = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColorsDark.backgroundColor,
+      appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: AppColorsDark.appBarColor,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: AppColorsDark.backgroundColor,
+        ),
+        backgroundColor: AppColorsDark.appBarColor,
+        elevation: 0,
+        leadingWidth: 20,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColorsDark.dividerColor,
+              foregroundImage: widget.user.avatarUrl.isNotEmpty
+                  ? NetworkImage(widget.user.avatarUrl)
+                  : null,
+              child: widget.user.avatarUrl.isEmpty
+                  ? const Icon(Icons.person)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              widget.user.name,
+              style: const TextStyle(
+                color: AppColorsDark.textColor1,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        actions: const [
+          Icon(
+            Icons.video_call_rounded,
+            color: AppColorsDark.textColor1,
+            size: 30,
+          ),
+          SizedBox(width: 20),
+          Icon(
+            Icons.phone_rounded,
+            color: AppColorsDark.textColor1,
+            size: 26,
+          ),
+          SizedBox(width: 20),
+          Icon(
+            Icons.more_vert_rounded,
+            color: AppColorsDark.textColor1,
+            size: 30,
+          )
+        ],
+      ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/dark/chat_bg.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Stack(
+              children: [
+                ListView(),
+                Container(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(50),
+                                color: AppColorsDark.appBarColor,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: const Icon(
+                                      Icons.emoji_emotions,
+                                      color: AppColorsDark.iconColor,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  Expanded(
+                                    child: TextField(
+                                      onChanged: (value) => setState(() {}),
+                                      minLines: 1,
+                                      maxLines: 999,
+                                      controller: messageTextController,
+                                      cursorColor: AppColorsDark.greenColor,
+                                      style: const TextStyle(
+                                        color: AppColorsDark.textColor1,
+                                        fontSize: 16,
+                                      ),
+                                      decoration: const InputDecoration(
+                                        hintText: "Message",
+                                        hintStyle: TextStyle(
+                                          color: AppColorsDark.greyColor,
+                                        ),
+                                        border: InputBorder.none,
+                                      ),
+                                    ),
+                                  ),
+                                  Transform.rotate(
+                                    angle: 100,
+                                    child: Container(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: const Icon(
+                                        Icons.attach_file_rounded,
+                                        color: AppColorsDark.iconColor,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ),
+                                  messageTextController.text.isEmpty
+                                      ? const SizedBox(width: 20)
+                                      : const SizedBox(),
+                                  messageTextController.text.isEmpty
+                                      ? Container(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 10,
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt_rounded,
+                                            color: AppColorsDark.iconColor,
+                                            size: 28,
+                                          ),
+                                        )
+                                      : const SizedBox(),
+                                ],
+                              )),
+                        ),
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColorsDark.greenColor,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: messageTextController.text.isEmpty
+                              ? const Icon(
+                                  Icons.mic_rounded,
+                                  color: Colors.white,
+                                  size: 30,
+                                )
+                              : const Icon(
+                                  Icons.send_rounded,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
 }
