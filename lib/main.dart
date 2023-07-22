@@ -30,6 +30,7 @@ class WhatsApp extends StatelessWidget {
           }
 
           // final user = snapshot.data;
+          // TODO: Send User to HomePage
           return const HomePage();
         },
       ),
