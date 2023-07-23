@@ -8,7 +8,7 @@ import 'package:whatsappclone/theme/color_theme.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:whatsappclone/utils/abc.dart';
 
-import 'chat_page.dart';
+import '../../chat/view/chat_page.dart';
 
 class HomePage extends StatefulWidget {
   final User user;

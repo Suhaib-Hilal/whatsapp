@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:whatsappclone/features/auth/view/home_page.dart';
+import 'package:whatsappclone/features/home/view/home_page.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'features/auth/view/welcome.dart';
 import 'firebase_options.dart';
@@ -22,6 +22,7 @@ class WhatsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
       title: 'Flutter Demo',
       home: StreamBuilder(
         stream: FirebaseAuth.instance.authStateChanges(),

@@ -9,7 +9,7 @@ import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
 import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
-import 'home_page.dart';
+import '../../home/view/home_page.dart';
 
 class UserProfilePage extends StatefulWidget {
   final PhoneNumber phone;
