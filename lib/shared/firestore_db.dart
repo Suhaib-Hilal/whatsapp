@@ -32,17 +32,17 @@ class FirestoreDatabase {
 
   static addMessage(Message message, User target, User reciever) async {
     // Add message in the chats collection.
-    final receiverRef = db
-        .collection("users")
-        .doc(target.id)
-        .collection("chats")
-        .doc(reciever.id)
-        .set(message.toMap(message));
+  //   final receiverRef = db
+  //       .collection("users")
+  //       .doc(target.id)
+  //       .collection("chats")
+  //       .doc(reciever.id)
+  //       .set(message.toMap(message));
 
-    await receiverDocRef
-        .collection('messages')
-        .doc(message.id)
-        .set(message.toMap());
+  //   await receiverDocRef
+  //       .collection('messages')
+  //       .doc(message.id)
+  //       .set(message.toMap());
     
   }
 }
