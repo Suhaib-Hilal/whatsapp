@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:whatsappclone/features/auth/model/message.dart';
 import 'package:whatsappclone/shared/user.dart';
 
 final db = FirebaseFirestore.instance;
@@ -27,5 +28,21 @@ class FirestoreDatabase {
     return querySnap.docs.isEmpty
         ? null
         : User.fromMap(querySnap.docs[0].data());
+  }
+
+  static addMessage(Message message, User target, User reciever) async {
+    // Add message in the chats collection.
+    final receiverRef = db
+        .collection("users")
+        .doc(target.id)
+        .collection("chats")
+        .doc(reciever.id)
+        .set(message.toMap(message));
+
+    await receiverDocRef
+        .collection('messages')
+        .doc(message.id)
+        .set(message.toMap());
+    
   }
 }

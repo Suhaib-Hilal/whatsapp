@@ -247,8 +247,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   () {
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
-                                        builder: (context) =>
-                                            const InitializingPage(),
+                                        builder: (context) => InitializingPage(
+                                          phone: widget.phone
+                                              .phoneNumberWithoutFormating,
+                                        ),
                                       ),
                                       (route) => false,
                                     );
@@ -419,7 +421,8 @@ class PhotoOption extends StatelessWidget {
 }
 
 class InitializingPage extends StatefulWidget {
-  const InitializingPage({super.key});
+  final String phone;
+  const InitializingPage({super.key, required this.phone});
 
   @override
   State<InitializingPage> createState() => _InitializingPageState();
@@ -430,10 +433,16 @@ class _InitializingPageState extends State<InitializingPage> {
   void initState() {
     Future.delayed(
       const Duration(seconds: 2),
-      () {
+      () async {
+        final user = await FirestoreDatabase.getUserByPhoneNumber(
+          widget.phone,
+        );
+        if (mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => const HomePage(),
+            builder: (context) => HomePage(
+              user: user!,
+            ),
           ),
           (route) => false,
         );
