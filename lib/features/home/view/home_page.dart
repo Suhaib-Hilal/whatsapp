@@ -87,6 +87,7 @@ class _HomePageState extends State<HomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(14.0),
                   child: FloatingActionButton(
+                    foregroundColor: Colors.white,
                     backgroundColor: AppColorsDark.greenColor,
                     elevation: 0,
                     onPressed: () async {
@@ -118,11 +119,13 @@ class _HomePageState extends State<HomePage> {
                           width: 44,
                           child: FloatingActionButton(
                             onPressed: () {},
+                            foregroundColor: Colors.white,
                             backgroundColor: AppColorsDark.appBarColor,
                             child: const Icon(Icons.edit),
                           ),
                         ),
                         FloatingActionButton(
+                          foregroundColor: Colors.white,
                           backgroundColor: AppColorsDark.greenColor,
                           elevation: 0,
                           onPressed: () {},
@@ -138,6 +141,7 @@ class _HomePageState extends State<HomePage> {
                 child: Padding(
                   padding: const EdgeInsets.all(14.0),
                   child: FloatingActionButton(
+                    foregroundColor: Colors.white,
                     backgroundColor: AppColorsDark.greenColor,
                     elevation: 0,
                     onPressed: () {},
