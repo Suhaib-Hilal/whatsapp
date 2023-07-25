@@ -110,13 +110,15 @@ class _CountryPickerState extends State<CountryPicker> {
               },
             );
           },
-          separatorBuilder: ((context, index) => const Divider(
-                height: 1,
-                thickness: 1,
-                color: AppColorsDark.dividerColor,
-                indent: 15,
-                endIndent: 15,
-              )),
+          separatorBuilder: ((context, index) {
+            return const Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColorsDark.dividerColor,
+              indent: 15,
+              endIndent: 15,
+            );
+          }),
         ));
   }
 }

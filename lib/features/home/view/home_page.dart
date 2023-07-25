@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,6 +21,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (!mounted) return;
+      setState(() {});
+    });
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,28 +93,104 @@ class _HomePageState extends State<HomePage> {
             physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics()),
             children: [
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: FloatingActionButton(
-                    backgroundColor: AppColorsDark.greenColor,
-                    elevation: 0,
-                    onPressed: () async {
-                      if (!await FlutterContacts.requestPermission()) {
-                        return;
-                      }
-                      if (!mounted) return;
-
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ContactsPage(user: widget.user),
-                        ),
+              Stack(
+                children: [
+                  StreamBuilder(
+                    stream: FirestoreDatabase.getRecentChats(widget.user),
+                    builder: ((context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox();
+                      final recents = snapshot.data!;
+                      return ListView.separated(
+                        itemCount: recents.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => ChatPage(
+                                    fromUser: widget.user,
+                                    toUser: recents[index].author,
+                                  ),
+                                ),
+                              );
+                            },
+                            leading: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppColorsDark.dividerColor,
+                              foregroundImage:
+                                  recents[index].author.avatarUrl.isNotEmpty
+                                      ? NetworkImage(
+                                          recents[index].author.avatarUrl)
+                                      : null,
+                              child: recents[index].author.avatarUrl.isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            title: Text(
+                              recents[index].author.name,
+                              style: const TextStyle(
+                                color: AppColorsDark.textColor1,
+                                fontSize: 16,
+                              ),
+                            ),
+                            subtitle: Text(
+                              recents[index].lastMsg.content.length > 30
+                                  ? "${recents[index].lastMsg.content.substring(0, 30)}..."
+                                  : recents[index].lastMsg.content,
+                              style: const TextStyle(
+                                color: AppColorsDark.greyColor,
+                              ),
+                            ),
+                            trailing: Text(
+                              formattedTimestamp(
+                                  recents[index].lastMsg.timestamp),
+                              style: const TextStyle(
+                                color: AppColorsDark.textColor1,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: ((context, index) {
+                          return const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: AppColorsDark.dividerColor,
+                            indent: 15,
+                            endIndent: 15,
+                          );
+                        }),
                       );
-                    },
-                    child: const Icon(Icons.message),
+                    }),
                   ),
-                ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: FloatingActionButton(
+                        backgroundColor: AppColorsDark.greenColor,
+                        elevation: 0,
+                        onPressed: () async {
+                          if (!await FlutterContacts.requestPermission()) {
+                            return;
+                          }
+                          if (!mounted) return;
+
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ContactsPage(user: widget.user),
+                            ),
+                          );
+                        },
+                        child: const Icon(
+                          Icons.message,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.all(14.0),
@@ -141,7 +228,10 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: AppColorsDark.greenColor,
                     elevation: 0,
                     onPressed: () {},
-                    child: const Icon(Icons.add_ic_call_rounded),
+                    child: const Icon(
+                      Icons.add_ic_call_rounded,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

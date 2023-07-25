@@ -1,8 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:whatsappclone/features/home/view/home_page.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
+import 'package:whatsappclone/shared/user.dart';
 import 'features/auth/view/welcome.dart';
 import 'firebase_options.dart';
 
@@ -24,33 +25,27 @@ class WhatsApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       title: 'Flutter Demo',
-      home: StreamBuilder(
-        stream: FirebaseAuth.instance.authStateChanges(),
+      home: StreamBuilder<auth.User?>(
+        stream: auth.FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.data == null) {
             return const WelcomePage();
           }
 
           final user = snapshot.data!;
-          return FutureBuilder(
+          return FutureBuilder<User?>(
             future: FirestoreDatabase.getUserById(user.uid),
             builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return HomePage(user: snapshot.data!);
-              } else if (snapshot.hasError) {
-                return Container(
-                  color: Colors.red,
-                  child: Center(
-                    child: Text(snapshot.error.toString()),
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: Image(
+                    image: AssetImage("assets/images/landing_img.png"),
+                    width: 100,
                   ),
                 );
               }
-              return const Center(
-                child: Image(
-                  image: AssetImage("assets/images/landing_img.png"),
-                  width: 100,
-                ),
-              );
+
+              return HomePage(user: snapshot.data!);
             },
           );
         },

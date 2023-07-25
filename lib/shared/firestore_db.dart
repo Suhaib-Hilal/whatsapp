@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:whatsappclone/features/chat/model/message.dart';
+import 'package:whatsappclone/features/home/model/recent_chat.dart';
 import 'package:whatsappclone/shared/user.dart';
 
 final db = FirebaseFirestore.instance;
@@ -30,46 +31,73 @@ class FirestoreDatabase {
         : User.fromMap(querySnap.docs[0].data());
   }
 
-  static Future<void> addMessage(Message message) async {
-    final receiverDocRef = db
-        .collection("users")
-        .doc(message.senderId)
+  static Stream<List<RecentChat>> getRecentChats(User user) {
+    return db
         .collection("chats")
-        .doc(message.receiverId);
+        .doc(user.id)
+        .collection("messages")
+        .orderBy("timestamp", descending: true)
+        .snapshots()
+        .asyncMap(
+      (event) async {
+        final recentChats = <RecentChat>[];
+        final visited = <String>{};
 
-    await receiverDocRef
-        .collection('messages')
+        for (var docChange in event.docChanges) {
+          final docData = docChange.doc.data()!;
+
+          final authorId = docData['senderId'] == user.id
+              ? docData['receiverId']
+              : docData['senderId'];
+
+          if (visited.contains(authorId)) continue;
+          final author = await FirestoreDatabase.getUserById(authorId);
+
+          recentChats.add(
+            RecentChat(
+              author: author!,
+              lastMsg: Message.fromMap(docData),
+            ),
+          );
+          visited.add(authorId);
+        }
+        return recentChats;
+      },
+    );
+  }
+
+  static Future<void> sendMessage(Message message) async {
+    await db
+        .collection("chats")
+        .doc(message.senderId)
+        .collection("messages")
         .doc(message.id)
         .set(message.toMap());
 
-    final senderDocRef = db
-        .collection("users")
-        .doc(message.receiverId)
+    await db
         .collection("chats")
-        .doc(message.senderId);
-
-    await senderDocRef
+        .doc(message.receiverId)
         .collection("messages")
         .doc(message.id)
         .set(message.toMap());
   }
 
-  static Stream<List<Message>> getChatMessages(
-      String targetUserId, String chatId) {
+  static Stream<List<Message>> getChatMessages(String selfId, String otherId) {
     return db
-        .collection("users")
-        .doc(targetUserId)
         .collection("chats")
-        .doc(chatId)
-        .collection('messages')
+        .doc(selfId)
+        .collection("messages")
         .orderBy("timestamp", descending: true)
+        .where("senderId", whereIn: [selfId, otherId])
         .snapshots()
-        .map((event) {
-      final messages = <Message>[];
-      for (var docSnap in event.docs) {
-        messages.add(Message.fromMap(docSnap.data()));
-      }
-      return messages;
-    });
+        .map(
+          (event) {
+            final messages = <Message>[];
+            for (var docSnap in event.docs) {
+              messages.add(Message.fromMap(docSnap.data()));
+            }
+            return messages;
+          },
+        );
   }
 }

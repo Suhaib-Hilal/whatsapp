@@ -312,7 +312,7 @@ class _LoginPageState extends State<LoginPage> {
                                     TextButton(
                                       onPressed: () {
                                         String phoneNumberWithFormating =
-                                            "+${countryPhoneCodeController.text}${phoneNumberController.text}";
+                                            "+${countryPhoneCodeController.text} ${phoneNumberController.text}";
                                         String phoneNumber =
                                             phoneNumberController.text
                                                 .replaceAll("-", "")
@@ -320,7 +320,7 @@ class _LoginPageState extends State<LoginPage> {
                                                 .replaceAll("(", "")
                                                 .replaceAll(")", "");
                                         phoneNumber =
-                                            "+${countryPhoneCodeController.text} $phoneNumber";
+                                            "+${countryPhoneCodeController.text}$phoneNumber";
 
                                         if (!mounted) return;
                                         Navigator.of(context)

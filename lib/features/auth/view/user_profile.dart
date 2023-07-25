@@ -437,7 +437,7 @@ class _InitializingPageState extends State<InitializingPage> {
         final user = await FirestoreDatabase.getUserByPhoneNumber(
           widget.phone,
         );
-        if (mounted) return;
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => HomePage(

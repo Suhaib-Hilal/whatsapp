@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 String formattedTime(int time) {
@@ -16,6 +17,23 @@ String formattedTime(int time) {
 
   return ([hoursStr, minuteStr, secondsStr]..removeWhere((str) => str == "00"))
       .join(":");
+}
+
+String formattedTimestamp(Timestamp timestamp) {
+  final date = timestamp.toDate();
+  final now = DateTime.now();
+
+  if (now.year > date.year ||
+      now.month > date.month ||
+      now.day - date.day > 1) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  if (now.day - date.day == 1) {
+    return "Yesterday";
+  }
+
+  return "${date.hour}:${date.minute}";
 }
 
 void sendMessage(String phoneNumber, String message) async {
