@@ -103,50 +103,58 @@ class _HomePageState extends State<HomePage> {
                       return ListView.separated(
                         itemCount: recents.length,
                         itemBuilder: (context, index) {
-                          return ListTile(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ChatPage(
-                                    fromUser: widget.user,
-                                    toUser: recents[index].author,
+                          final recent = recents[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: ListTile(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) {
+                                      return ChatPage(
+                                        fromUser: widget.user,
+                                        toUser: recent.author,
+                                      );
+                                    },
                                   ),
+                                );
+                              },
+                              leading: CircleAvatar(
+                                radius: 30,
+                                backgroundColor: AppColorsDark.dividerColor,
+                                foregroundImage:
+                                    recent.author.avatarUrl.isNotEmpty
+                                        ? NetworkImage(
+                                            recent.author.avatarUrl,
+                                          )
+                                        : null,
+                                child: recent.author.avatarUrl.isEmpty
+                                    ? const Icon(Icons.person)
+                                    : null,
+                              ),
+                              title: Text(
+                                recent.author.name,
+                                style: const TextStyle(
+                                  color: AppColorsDark.textColor1,
+                                  fontSize: 16,
                                 ),
-                              );
-                            },
-                            leading: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: AppColorsDark.dividerColor,
-                              foregroundImage:
-                                  recents[index].author.avatarUrl.isNotEmpty
-                                      ? NetworkImage(
-                                          recents[index].author.avatarUrl)
-                                      : null,
-                              child: recents[index].author.avatarUrl.isEmpty
-                                  ? const Icon(Icons.person)
-                                  : null,
-                            ),
-                            title: Text(
-                              recents[index].author.name,
-                              style: const TextStyle(
-                                color: AppColorsDark.textColor1,
-                                fontSize: 16,
                               ),
-                            ),
-                            subtitle: Text(
-                              recents[index].lastMsg.content.length > 30
-                                  ? "${recents[index].lastMsg.content.substring(0, 30)}..."
-                                  : recents[index].lastMsg.content,
-                              style: const TextStyle(
-                                color: AppColorsDark.greyColor,
+                              subtitle: Text(
+                                recent.lastMsg.content.length > 30
+                                    ? "${recent.lastMsg.content.substring(0, 30)}..."
+                                    : recent.lastMsg.content,
+                                style: const TextStyle(
+                                  color: AppColorsDark.greyColor,
+                                ),
                               ),
-                            ),
-                            trailing: Text(
-                              formattedTimestamp(
-                                  recents[index].lastMsg.timestamp),
-                              style: const TextStyle(
-                                color: AppColorsDark.textColor1,
-                                fontSize: 14,
+                              trailing: Text(
+                                formattedTimestamp(
+                                  recent.lastMsg.timestamp,
+                                ),
+                                style: const TextStyle(
+                                  color: AppColorsDark.greyColor,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                           );
@@ -257,8 +265,7 @@ class ContactsPage extends StatefulWidget {
 class _ContactsPageState extends State<ContactsPage> {
   bool isSearching = false;
   Future<(List<User>, List<Contact>)> contactsFuture = getContactsInfo();
-  TextEditingController contactSearchingController =
-      TextEditingController(text: "");
+  final contactSearchingController = TextEditingController(text: "");
   final shareMsg =
       "Let's chat on WhatsApp! It's a fast, simple and secure app we can use to message and call each other for free. Get it at https://github.com/Suhaib-Hilal/whatsapp.git";
   final contactsHelpUrl =
@@ -266,7 +273,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
   @override
   Widget build(BuildContext context) {
-    var topOptions = Column(
+    final topOptions = Column(
       children: [
         ListTile(
           leading: Container(
@@ -344,6 +351,24 @@ class _ContactsPageState extends State<ContactsPage> {
         ),
       ],
     );
+    final searchingTextField = TextField(
+      onChanged: (value) => setState(() {}),
+      textAlignVertical: TextAlignVertical.bottom,
+      style: const TextStyle(
+        color: AppColorsDark.textColor1,
+        fontSize: 18,
+      ),
+      controller: contactSearchingController,
+      cursorColor: AppColorsDark.greenColor,
+      decoration: const InputDecoration(
+        hintText: "Search...",
+        hintStyle: TextStyle(
+          color: AppColorsDark.greyColor,
+          fontSize: 18,
+        ),
+        border: InputBorder.none,
+      ),
+    );
     return Scaffold(
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
@@ -357,25 +382,7 @@ class _ContactsPageState extends State<ContactsPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            !isSearching
-                ? const Text("Select contact")
-                : TextField(
-                    textAlignVertical: TextAlignVertical.bottom,
-                    style: const TextStyle(
-                      color: AppColorsDark.textColor1,
-                      fontSize: 18,
-                    ),
-                    controller: contactSearchingController,
-                    cursorColor: AppColorsDark.greenColor,
-                    decoration: const InputDecoration(
-                      hintText: "Search...",
-                      hintStyle: TextStyle(
-                        color: AppColorsDark.greyColor,
-                        fontSize: 18,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  ),
+            !isSearching ? const Text("Select contact") : searchingTextField,
             FutureBuilder(
               future: contactsFuture,
               builder: (context, snapshot) {
@@ -503,36 +510,60 @@ class _ContactsPageState extends State<ContactsPage> {
             parent: AlwaysScrollableScrollPhysics(),
           ),
           children: [
-            if (contactSearchingController.text == "")
-              topOptions
-            else
-              const SizedBox(
-                height: 12,
-              ),
+            contactSearchingController.text == ""
+                ? topOptions
+                : const SizedBox(height: 12),
             FutureBuilder(
               future: contactsFuture,
               builder: (context, snapshot) {
                 List<User> contactsOnWhatsapp = [];
                 List<Contact> contactsNotOnWhatsapp = [];
                 List<Widget> abc = [];
+                final searching = contactSearchingController.text != "";
+                final searchTextLength = contactSearchingController.text.length;
+                final searchText = contactSearchingController.text;
 
                 if (snapshot.hasData) {
                   (contactsOnWhatsapp, contactsNotOnWhatsapp) = snapshot.data!;
+                  final whatsappContacts = contactsOnWhatsapp.where((contact) {
+                    return contact.name
+                        .toLowerCase()
+                        .startsWith(searchText.toLowerCase());
+                  });
+                  final contacts = contactsNotOnWhatsapp.where(
+                    (contact) {
+                      return contact.displayName
+                          .toLowerCase()
+                          .startsWith(searchText.toLowerCase());
+                    },
+                  );
+                  if (whatsappContacts.isEmpty && contacts.isEmpty) {
+                    var text = "";
+                    if (searchTextLength >= 20) {
+                      text = "${searchText.substring(0, 20)}...";
+                    } else {
+                      text = searchText;
+                    }
+                    abc.add(
+                      Text(
+                        "No results found for '$text'",
+                        style: const TextStyle(
+                          color: AppColorsDark.greyColor,
+                        ),
+                      ),
+                    );
+                  }
                 }
 
                 if (contactsOnWhatsapp.isNotEmpty) {
-                  if (contactSearchingController.text == "" &&
-                          contactsOnWhatsapp.where((contact) {
-                            return contact.name.toLowerCase().startsWith(
-                                  contactSearchingController.text.toLowerCase(),
-                                );
-                          }).isNotEmpty ||
-                      contactSearchingController.text != "" &&
-                          contactsOnWhatsapp.where((contact) {
-                            return contact.name.toLowerCase().startsWith(
-                                  contactSearchingController.text.toLowerCase(),
-                                );
-                          }).isNotEmpty) {
+                  final whatsappContacts = contactsOnWhatsapp.where((contact) {
+                    return contact.name
+                        .toLowerCase()
+                        .startsWith(searchText.toLowerCase());
+                  });
+
+                  if (!searching && whatsappContacts.isNotEmpty ||
+                      searching && whatsappContacts.isNotEmpty) {
                     abc.add(
                       const Row(
                         children: [
@@ -545,18 +576,7 @@ class _ContactsPageState extends State<ContactsPage> {
                       ),
                     );
                   }
-                  if (contactSearchingController.text != "") {
-                    contactsOnWhatsapp.where(
-                      (contact) => contact.name.toLowerCase().startsWith(
-                            contactSearchingController.text.toLowerCase(),
-                          ),
-                    );
-                  }
-                  for (final contact in contactsOnWhatsapp.where((contact) {
-                    return contact.name.toLowerCase().startsWith(
-                          contactSearchingController.text.toLowerCase(),
-                        );
-                  })) {
+                  for (final contact in whatsappContacts) {
                     abc.add(
                       InkWell(
                         onTap: () {
@@ -587,13 +607,39 @@ class _ContactsPageState extends State<ContactsPage> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    contact.name,
-                                    style: const TextStyle(
-                                      color: AppColorsDark.textColor1,
-                                      fontSize: 16,
-                                    ),
-                                  ),
+                                  !searching
+                                      ? Text(
+                                          contact.name,
+                                          style: const TextStyle(
+                                            color: AppColorsDark.textColor1,
+                                            fontSize: 16,
+                                          ),
+                                        )
+                                      : RichText(
+                                          text: TextSpan(
+                                            text: "",
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            children: <TextSpan>[
+                                              TextSpan(
+                                                text: contact.name.substring(
+                                                    0, searchTextLength),
+                                                style: const TextStyle(
+                                                  color:
+                                                      AppColorsDark.blueColor,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: contact.name.substring(
+                                                  searchTextLength,
+                                                  contact.name.length,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                   const Text(
                                     "Hey there, I am using whatsapp.",
                                     style: TextStyle(
@@ -610,23 +656,15 @@ class _ContactsPageState extends State<ContactsPage> {
                   }
                 }
                 if (contactsNotOnWhatsapp.isNotEmpty) {
-                  if (contactSearchingController.text == "" &&
-                          contactsNotOnWhatsapp
-                              .where(
-                                (contact) => contact.displayName
-                                    .toLowerCase()
-                                    .startsWith(
-                                      contactSearchingController.text
-                                          .toLowerCase(),
-                                    ),
-                              )
-                              .isNotEmpty ||
-                      contactSearchingController.text != "" &&
-                          contactsNotOnWhatsapp.where((contact) {
-                            return contact.displayName.toLowerCase().startsWith(
-                                  contactSearchingController.text.toLowerCase(),
-                                );
-                          }).isNotEmpty) {
+                  final contacts = contactsNotOnWhatsapp.where(
+                    (contact) {
+                      return contact.displayName.toLowerCase().startsWith(
+                            contactSearchingController.text.toLowerCase(),
+                          );
+                    },
+                  );
+                  if (!searching && contacts.isNotEmpty ||
+                      searching && contacts.isNotEmpty) {
                     abc.add(
                       const Row(
                         children: [
@@ -639,18 +677,7 @@ class _ContactsPageState extends State<ContactsPage> {
                       ),
                     );
                   }
-                  if (contactSearchingController.text != "") {
-                    contactsNotOnWhatsapp.where(
-                      (contact) => contact.displayName.startsWith(
-                        contactSearchingController.text,
-                      ),
-                    );
-                  }
-                  for (final contact in contactsNotOnWhatsapp.where((contact) {
-                    return contact.displayName.toLowerCase().startsWith(
-                          contactSearchingController.text.toLowerCase(),
-                        );
-                  })) {
+                  for (final contact in contacts) {
                     abc.add(
                       Padding(
                         padding: const EdgeInsets.only(
@@ -678,13 +705,42 @@ class _ContactsPageState extends State<ContactsPage> {
                                       : null,
                                 ),
                                 const SizedBox(width: 20),
-                                Text(
-                                  contact.displayName,
-                                  style: const TextStyle(
-                                    color: AppColorsDark.textColor1,
-                                    fontSize: 16,
-                                  ),
-                                ),
+                                !searching
+                                    ? Text(
+                                        contact.displayName,
+                                        style: const TextStyle(
+                                          color: AppColorsDark.textColor1,
+                                          fontSize: 16,
+                                        ),
+                                      )
+                                    : RichText(
+                                        text: TextSpan(
+                                          text: "",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                          children: <TextSpan>[
+                                            TextSpan(
+                                              text:
+                                                  contact.displayName.substring(
+                                                0,
+                                                searchTextLength,
+                                              ),
+                                              style: const TextStyle(
+                                                color: AppColorsDark.blueColor,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            TextSpan(
+                                              text:
+                                                  contact.displayName.substring(
+                                                searchTextLength,
+                                                contact.displayName.length,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                               ],
                             ),
                             TextButton(
@@ -712,57 +768,58 @@ class _ContactsPageState extends State<ContactsPage> {
                 );
               },
             ),
-            contactSearchingController.text != ""
-                ? Column(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(
-                          top: 10,
-                          bottom: 10,
+            if (contactSearchingController.text != "")
+              Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(
+                      top: 10,
+                      bottom: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 10),
+                        Text(
+                          "More",
+                          style: TextStyle(color: AppColorsDark.greyColor),
                         ),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 10),
-                            Text(
-                              "More",
-                              style: TextStyle(color: AppColorsDark.greyColor),
-                            ),
-                          ],
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 10,
+                      right: 10,
+                      left: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(50),
+                            color: AppColorsDark.appBarColor,
+                          ),
+                          child: const Icon(
+                            Icons.person_add,
+                            color: AppColorsDark.iconColor,
+                          ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: 10,
-                          right: 10,
-                          left: 16,
+                        const SizedBox(width: 20),
+                        const Text(
+                          "New contact",
+                          style: TextStyle(
+                            color: AppColorsDark.textColor1,
+                            fontSize: 16,
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(50),
-                                color: AppColorsDark.appBarColor,
-                              ),
-                              child: const Icon(
-                                Icons.person_add,
-                                color: AppColorsDark.iconColor,
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            const Text(
-                              "New contact",
-                              style: TextStyle(
-                                color: AppColorsDark.textColor1,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox(),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            else
+              const SizedBox(),
             Padding(
               padding: const EdgeInsets.only(
                 top: 10,
@@ -808,9 +865,7 @@ class _ContactsPageState extends State<ContactsPage> {
                 left: 16,
               ),
               child: GestureDetector(
-                onTap: () {
-                  launchUrl(Uri.parse(contactsHelpUrl));
-                },
+                onTap: () => launchUrl(Uri.parse(contactsHelpUrl)),
                 child: Row(
                   children: [
                     Container(
@@ -844,8 +899,9 @@ class _ContactsPageState extends State<ContactsPage> {
 }
 
 Future<(List<User>, List<Contact>)> getContactsInfo() async {
-  List<Contact> contacts =
-      await FlutterContacts.getContacts(withProperties: true);
+  List<Contact> contacts = await FlutterContacts.getContacts(
+    withProperties: true,
+  );
   List<User> contactsOnWhatsapp = [];
   List<Contact> contactsNotOnWhatsapp = [];
 

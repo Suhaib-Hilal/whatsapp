@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:whatsappclone/features/home/view/home_page.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
+import 'package:whatsappclone/theme/color_theme.dart';
 import 'features/auth/view/welcome.dart';
 import 'firebase_options.dart';
 
@@ -37,10 +38,14 @@ class WhatsApp extends StatelessWidget {
             future: FirestoreDatabase.getUserById(user.uid),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(
-                  child: Image(
-                    image: AssetImage("assets/images/landing_img.png"),
-                    width: 100,
+                return Container(
+                  color: AppColorsDark.backgroundColor,
+                  child: const Center(
+                    child: Image(
+                      image: AssetImage("assets/images/landing_img.png"),
+                      color: AppColorsDark.greenColor,
+                      width: 100,
+                    ),
                   ),
                 );
               }

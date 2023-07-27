@@ -110,8 +110,10 @@ class _ChatPageState extends State<ChatPage> {
                         shrinkWrap: true,
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
+                          final message = messages[index];
                           final isOwnMessage =
-                              widget.fromUser.id == messages[index].senderId;
+                              widget.fromUser.id == message.senderId;
+                          final date = message.timestamp.toDate();
                           return Align(
                             alignment: isOwnMessage
                                 ? Alignment.centerRight
@@ -123,17 +125,22 @@ class _ChatPageState extends State<ChatPage> {
                                     MediaQuery.of(context).size.width * 0.80,
                               ),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12.0),
+                                borderRadius: BorderRadius.circular(14.0),
                                 color: isOwnMessage
                                     ? AppColorsDark.outgoingMessageBubbleColor
                                     : AppColorsDark.incomingMessageBubbleColor,
                               ),
                               margin: const EdgeInsets.only(bottom: 4),
                               padding: const EdgeInsets.symmetric(
-                                vertical: 12,
+                                vertical: 10,
                                 horizontal: 8,
                               ),
-                              child: Text(messages[index].content),
+                              child: Text(
+                                message.content,
+                                style: const TextStyle(
+                                  color: AppColorsDark.textColor1,
+                                ),
+                              ),
                             ),
                           );
                         },
