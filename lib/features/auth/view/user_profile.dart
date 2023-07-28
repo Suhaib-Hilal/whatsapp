@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:whatsappclone/shared/firebase_storage.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
+import 'package:whatsappclone/utils/abc.dart';
 import '../../../theme/color_theme.dart';
 import '../model/phone_number.dart';
 import '../../home/view/home_page.dart';
@@ -342,7 +344,6 @@ Future<void> addUserInfo(
       selectedImage,
     );
   }
-
   User user = User(
     name: username,
     id: id,

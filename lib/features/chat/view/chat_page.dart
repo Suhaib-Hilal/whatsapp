@@ -6,6 +6,7 @@ import 'package:whatsappclone/features/chat/model/message.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
 import 'package:whatsappclone/theme/color_theme.dart';
+import 'package:whatsappclone/utils/abc.dart';
 
 class ChatPage extends StatefulWidget {
   final User fromUser;
@@ -46,32 +47,44 @@ class _ChatPageState extends State<ChatPage> {
                   : null,
             ),
             const SizedBox(width: 10),
-            Text(
-              widget.toUser.name,
-              style: const TextStyle(
-                color: AppColorsDark.textColor1,
-                fontSize: 16,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.toUser.name,
+                  style: const TextStyle(
+                    color: AppColorsDark.textColor1,
+                    fontSize: 16,
+                  ),
+                ),
+                const Text(
+                  "Online",
+                  style: TextStyle(
+                    color: AppColorsDark.greyColor,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         actions: const [
           Icon(
-            Icons.video_call_rounded,
+            Icons.videocam_rounded,
             color: AppColorsDark.textColor1,
-            size: 30,
+            size: 24,
           ),
           SizedBox(width: 20),
           Icon(
             Icons.phone_rounded,
             color: AppColorsDark.textColor1,
-            size: 26,
+            size: 22,
           ),
           SizedBox(width: 20),
           Icon(
             Icons.more_vert_rounded,
             color: AppColorsDark.textColor1,
-            size: 30,
+            size: 24,
           )
         ],
       ),
@@ -113,7 +126,6 @@ class _ChatPageState extends State<ChatPage> {
                           final message = messages[index];
                           final isOwnMessage =
                               widget.fromUser.id == message.senderId;
-                          final date = message.timestamp.toDate();
                           return Align(
                             alignment: isOwnMessage
                                 ? Alignment.centerRight
@@ -125,21 +137,59 @@ class _ChatPageState extends State<ChatPage> {
                                     MediaQuery.of(context).size.width * 0.80,
                               ),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14.0),
+                                borderRadius: BorderRadius.circular(12.0),
                                 color: isOwnMessage
                                     ? AppColorsDark.outgoingMessageBubbleColor
                                     : AppColorsDark.incomingMessageBubbleColor,
                               ),
-                              margin: const EdgeInsets.only(bottom: 4),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 8,
-                              ),
-                              child: Text(
-                                message.content,
-                                style: const TextStyle(
-                                  color: AppColorsDark.textColor1,
-                                ),
+                              margin: const EdgeInsets.only(bottom: 3),
+                              padding: const EdgeInsets.all(8),
+                              child: Stack(
+                                alignment: Alignment.bottomRight,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            message.content.length > 40
+                                                ? message.content
+                                                : message.content + " " * 12,
+                                            style: const TextStyle(
+                                              color: AppColorsDark.textColor1,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        formattedTimestamp(
+                                          message.timestamp,
+                                          onlyTime: true,
+                                        ),
+                                        style: const TextStyle(
+                                          color: AppColorsDark.textColor2,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 2),
+                                        child: const Icon(
+                                          Icons.check_rounded,
+                                          size: 16,
+                                          color: AppColorsDark.textColor2,
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -156,78 +206,97 @@ class _ChatPageState extends State<ChatPage> {
                 padding: const EdgeInsets.only(bottom: 5),
                 child: Row(
                   children: [
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            color: AppColorsDark.appBarColor,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          color: AppColorsDark.appBarColor,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: const Icon(
+                                Icons.emoji_emotions,
+                                color: AppColorsDark.iconColor,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            Expanded(
+                              child: TextField(
+                                onChanged: (value) => setState(() {}),
+                                minLines: 1,
+                                maxLines: 999,
+                                controller: messageTextController,
+                                cursorColor: AppColorsDark.greenColor,
+                                style: const TextStyle(
+                                  color: AppColorsDark.textColor1,
+                                  fontSize: 18,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: "Message",
+                                  hintStyle: TextStyle(
+                                    color: AppColorsDark.greyColor,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                              ),
+                            ),
+                            Transform.rotate(
+                              angle: -0.7,
+                              child: Container(
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: const Icon(
-                                  Icons.emoji_emotions,
+                                  Icons.attach_file,
                                   color: AppColorsDark.iconColor,
-                                  size: 28,
+                                  size: 26,
                                 ),
                               ),
-                              const SizedBox(
-                                width: 10,
-                              ),
-                              Expanded(
-                                child: TextField(
-                                  onChanged: (value) => setState(() {}),
-                                  minLines: 1,
-                                  maxLines: 999,
-                                  controller: messageTextController,
-                                  cursorColor: AppColorsDark.greenColor,
-                                  style: const TextStyle(
-                                    color: AppColorsDark.textColor1,
-                                    fontSize: 16,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    hintText: "Message",
-                                    hintStyle: TextStyle(
-                                      color: AppColorsDark.greyColor,
+                            ),
+                            messageTextController.text.isEmpty
+                                ? const SizedBox(width: 20)
+                                : const SizedBox(),
+                            messageTextController.text.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.all(2),
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(50),
+                                      color: AppColorsDark.iconColor,
                                     ),
-                                    border: InputBorder.none,
-                                  ),
-                                ),
-                              ),
-                              Transform.rotate(
-                                angle: 100,
-                                child: Container(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: const Icon(
-                                    Icons.attach_file_rounded,
-                                    color: AppColorsDark.iconColor,
-                                    size: 28,
-                                  ),
-                                ),
-                              ),
-                              messageTextController.text.isEmpty
-                                  ? const SizedBox(width: 20)
-                                  : const SizedBox(),
-                              messageTextController.text.isEmpty
-                                  ? Container(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 10,
-                                      ),
-                                      child: const Icon(
-                                        Icons.camera_alt_rounded,
-                                        color: AppColorsDark.iconColor,
-                                        size: 28,
-                                      ),
-                                    )
-                                  : const SizedBox(),
-                            ],
-                          )),
+                                    child: const Icon(
+                                      Icons.currency_rupee_rounded,
+                                      color: AppColorsDark.appBarColor,
+                                      size: 20,
+                                    ),
+                                  )
+                                : const SizedBox(),
+                            messageTextController.text.isEmpty
+                                ? const SizedBox(width: 20)
+                                : const SizedBox(),
+                            messageTextController.text.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.only(
+                                      bottom: 10,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: AppColorsDark.iconColor,
+                                      size: 24,
+                                    ),
+                                  )
+                                : const SizedBox(),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 5),
                     Container(
@@ -238,7 +307,7 @@ class _ChatPageState extends State<ChatPage> {
                       ),
                       child: messageTextController.text.isEmpty
                           ? const Icon(
-                              Icons.mic_rounded,
+                              Icons.mic,
                               color: Colors.white,
                               size: 30,
                             )
@@ -246,6 +315,7 @@ class _ChatPageState extends State<ChatPage> {
                               onTap: () async {
                                 final msg = messageTextController.text;
                                 messageTextController.text = "";
+                                setState(() {});
 
                                 await FirestoreDatabase.sendMessage(
                                   Message(
@@ -264,7 +334,7 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                             ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 6),
                   ],
                 ),
               ),

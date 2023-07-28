@@ -59,11 +59,10 @@ class _VerificationPageState extends State<VerificationPage> {
                           text = "Verification Complete";
                           icon = Container(
                             decoration: const BoxDecoration(
-                                // color: AppColorsDark.greenColor,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30))),
-                            // height: 30,
-                            // width: 30,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(30),
+                              ),
+                            ),
                             child: const Icon(
                               Icons.check_circle,
                               color: AppColorsDark.greenColor,

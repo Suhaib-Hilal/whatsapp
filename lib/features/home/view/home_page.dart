@@ -99,75 +99,117 @@ class _HomePageState extends State<HomePage> {
                     stream: FirestoreDatabase.getRecentChats(widget.user),
                     builder: ((context, snapshot) {
                       if (!snapshot.hasData) return const SizedBox();
+
                       final recents = snapshot.data!;
-                      return ListView.separated(
+                      return ListView.builder(
                         itemCount: recents.length,
                         itemBuilder: (context, index) {
                           final recent = recents[index];
                           return Padding(
                             padding: const EdgeInsets.only(top: 4),
-                            child: ListTile(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) {
-                                      return ChatPage(
-                                        fromUser: widget.user,
-                                        toUser: recent.author,
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                              leading: CircleAvatar(
-                                radius: 30,
-                                backgroundColor: AppColorsDark.dividerColor,
-                                foregroundImage:
-                                    recent.author.avatarUrl.isNotEmpty
-                                        ? NetworkImage(
-                                            recent.author.avatarUrl,
-                                          )
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) {
+                                          return ChatPage(
+                                            fromUser: widget.user,
+                                            toUser: recent.author,
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  leading: CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: AppColorsDark.dividerColor,
+                                    foregroundImage:
+                                        recent.author.avatarUrl.isNotEmpty
+                                            ? NetworkImage(
+                                                recent.author.avatarUrl,
+                                              )
+                                            : null,
+                                    child: recent.author.avatarUrl.isEmpty
+                                        ? const Icon(Icons.person)
                                         : null,
-                                child: recent.author.avatarUrl.isEmpty
-                                    ? const Icon(Icons.person)
-                                    : null,
-                              ),
-                              title: Text(
-                                recent.author.name,
-                                style: const TextStyle(
-                                  color: AppColorsDark.textColor1,
-                                  fontSize: 16,
+                                  ),
+                                  title: Text(
+                                    recent.author.name,
+                                    style: const TextStyle(
+                                      color: AppColorsDark.textColor1,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    recent.lastMsg.content.length > 30
+                                        ? "${recent.lastMsg.content.substring(0, 30)}..."
+                                        : recent.lastMsg.content,
+                                    style: const TextStyle(
+                                      color: AppColorsDark.greyColor,
+                                    ),
+                                  ),
+                                  trailing: Text(
+                                    formattedTimestamp(
+                                      recent.lastMsg.timestamp,
+                                    ),
+                                    style: const TextStyle(
+                                      color: AppColorsDark.greyColor,
+                                      fontSize: 14,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              subtitle: Text(
-                                recent.lastMsg.content.length > 30
-                                    ? "${recent.lastMsg.content.substring(0, 30)}..."
-                                    : recent.lastMsg.content,
-                                style: const TextStyle(
-                                  color: AppColorsDark.greyColor,
-                                ),
-                              ),
-                              trailing: Text(
-                                formattedTimestamp(
-                                  recent.lastMsg.timestamp,
-                                ),
-                                style: const TextStyle(
-                                  color: AppColorsDark.greyColor,
-                                  fontSize: 14,
-                                ),
-                              ),
+                                const SizedBox(height: 10),
+                                recent == recents.last
+                                    ? Column(
+                                        children: [
+                                          const Divider(
+                                            height: 1,
+                                            thickness: 1,
+                                            color: AppColorsDark.dividerColor,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.lock_rounded,
+                                                color: AppColorsDark.iconColor,
+                                                size: 12,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              RichText(
+                                                text: const TextSpan(
+                                                  text:
+                                                      "Your personal messages are ",
+                                                  style: TextStyle(
+                                                    color:
+                                                        AppColorsDark.iconColor,
+                                                    fontSize: 12,
+                                                  ),
+                                                  children: <TextSpan>[
+                                                    TextSpan(
+                                                      text:
+                                                          "end-to-end encrypted",
+                                                      style: TextStyle(
+                                                        color: AppColorsDark
+                                                            .greenColor,
+                                                      ),
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      )
+                                    : const SizedBox(),
+                              ],
                             ),
                           );
                         },
-                        separatorBuilder: ((context, index) {
-                          return const Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: AppColorsDark.dividerColor,
-                            indent: 15,
-                            endIndent: 15,
-                          );
-                        }),
                       );
                     }),
                   ),

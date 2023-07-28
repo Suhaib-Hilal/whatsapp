@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 String formattedTime(int time) {
@@ -19,21 +20,43 @@ String formattedTime(int time) {
       .join(":");
 }
 
-String formattedTimestamp(Timestamp timestamp) {
+String formattedTimestamp(Timestamp timestamp, {bool onlyTime = false}) {
   final date = timestamp.toDate();
   final now = DateTime.now();
 
-  if (now.year > date.year ||
-      now.month > date.month ||
-      now.day - date.day > 1) {
-    return "${date.day}/${date.month}/${date.year}";
-  }
+  if (!onlyTime) {
+    if (now.year > date.year ||
+        now.month > date.month ||
+        now.day - date.day > 1) {
+      return "${date.day}/${date.month}/${date.year}";
+    }
 
-  if (now.day - date.day == 1) {
-    return "Yesterday";
+    if (now.day - date.day == 1) {
+      return "Yesterday";
+    }
   }
+  if (date.hour > 9 && date.minute > 9) {
+    return "${date.hour}:${date.minute}";
+  } else if (date.hour > 9 && date.minute < 9) {
+    return "${date.hour}:0${date.minute}";
+  } else if (date.hour < 9 && date.minute > 9) {
+    return "0${date.hour}:${date.minute}";
+  }
+  return "0${date.hour}:0${date.minute}";
+}
 
-  return "${date.hour}:${date.minute}";
+Future<bool> checkInternetConnectivity() async {
+  var connectivityResult = await (Connectivity().checkConnectivity());
+  return connectivityResult != ConnectivityResult.none;
+}
+
+Future<String> getUserStatus() async {
+  bool isOnline = await checkInternetConnectivity();
+  if (isOnline) {
+    return "Online";
+  } else {
+    return "Offline";
+  }
 }
 
 void sendMessage(String phoneNumber, String message) async {

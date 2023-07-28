@@ -37,6 +37,7 @@ class WhatsApp extends StatelessWidget {
           return FutureBuilder<User?>(
             future: FirestoreDatabase.getUserById(user.uid),
             builder: (context, snapshot) {
+              if (snapshot.hasError) return Text(snapshot.error.toString());
               if (!snapshot.hasData) {
                 return Container(
                   color: AppColorsDark.backgroundColor,
@@ -44,7 +45,7 @@ class WhatsApp extends StatelessWidget {
                     child: Image(
                       image: AssetImage("assets/images/landing_img.png"),
                       color: AppColorsDark.greenColor,
-                      width: 100,
+                      width: 200,
                     ),
                   ),
                 );
