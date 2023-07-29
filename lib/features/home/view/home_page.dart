@@ -20,7 +20,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void initState() {
     Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -28,6 +28,22 @@ class _HomePageState extends State<HomePage> {
       setState(() {});
     });
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      await FirestoreDatabase.updateUserStatus(widget.user.id, "Online");
+    } else {
+      await FirestoreDatabase.updateUserStatus(widget.user.id, "Offline");
+    }
   }
 
   @override

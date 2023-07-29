@@ -57,12 +57,21 @@ class _ChatPageState extends State<ChatPage> {
                     fontSize: 16,
                   ),
                 ),
-                const Text(
-                  "Online",
-                  style: TextStyle(
-                    color: AppColorsDark.greyColor,
-                    fontSize: 16,
-                  ),
+                StreamBuilder(
+                  stream: FirestoreDatabase.getUserStatus(widget.toUser.id),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data == "Offline") {
+                      return const Text("");
+                    }
+
+                    return Text(
+                      snapshot.data!,
+                      style: const TextStyle(
+                        color: AppColorsDark.greyColor,
+                        fontSize: 14,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -181,11 +190,17 @@ class _ChatPageState extends State<ChatPage> {
                                       ),
                                       Container(
                                         margin: const EdgeInsets.only(left: 2),
-                                        child: const Icon(
-                                          Icons.check_rounded,
-                                          size: 16,
-                                          color: AppColorsDark.textColor2,
-                                        ),
+                                        child: message.status != "PENDING"
+                                            ? const Icon(
+                                                Icons.check_rounded,
+                                                size: 16,
+                                                color: AppColorsDark.textColor2,
+                                              )
+                                            : const Icon(
+                                                Icons.punch_clock_rounded,
+                                                size: 16,
+                                                color: AppColorsDark.textColor2,
+                                              ),
                                       )
                                     ],
                                   ),
@@ -317,14 +332,23 @@ class _ChatPageState extends State<ChatPage> {
                                 messageTextController.text = "";
                                 setState(() {});
 
-                                await FirestoreDatabase.sendMessage(
-                                  Message(
-                                    id: const Uuid().v4(),
-                                    content: msg,
-                                    senderId: widget.fromUser.id,
-                                    receiverId: widget.toUser.id,
-                                    timestamp: Timestamp.now(),
-                                  ),
+                                final message = Message(
+                                  id: const Uuid().v4(),
+                                  content: msg,
+                                  senderId: widget.fromUser.id,
+                                  receiverId: widget.toUser.id,
+                                  status: "PENDING",
+                                  timestamp: Timestamp.now(),
+                                );
+
+                                await FirestoreDatabase.sendMessage(message)
+                                    .then(
+                                  (value) async {
+                                    await FirestoreDatabase.changeMessageStatus(
+                                      message,
+                                      "SENT",
+                                    );
+                                  },
                                 );
                               },
                               child: const Icon(

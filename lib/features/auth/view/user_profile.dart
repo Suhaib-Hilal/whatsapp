@@ -347,6 +347,7 @@ Future<void> addUserInfo(
   User user = User(
     name: username,
     id: id,
+    status: "Online",
     avatarUrl: avatarUrl,
     phone: phone,
   );

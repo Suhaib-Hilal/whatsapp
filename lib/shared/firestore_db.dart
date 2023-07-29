@@ -100,4 +100,25 @@ class FirestoreDatabase {
           },
         );
   }
+
+  static Stream<String?> getUserStatus(String userId) {
+    return db
+        .collection("users")
+        .doc(userId)
+        .snapshots()
+        .map((event) => event.data()!["status"]);
+  }
+
+  static Future<void> updateUserStatus(String userId, String value) async {
+    await db.collection("users").doc(userId).update({"status": value});
+  }
+
+  static Future<void> changeMessageStatus(Message message, String value) async {
+    await db
+        .collection("chats")
+        .doc(message.senderId)
+        .collection("messages")
+        .doc(message.id)
+        .update({"status": value});
+  }
 }

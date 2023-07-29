@@ -5,6 +5,7 @@ class Message {
   final String content;
   final String senderId;
   final String receiverId;
+  final String status;
   final Timestamp timestamp;
 
   const Message({
@@ -12,15 +13,17 @@ class Message {
     required this.content,
     required this.senderId,
     required this.receiverId,
+    required this.status,
     required this.timestamp,
   });
 
   Map<String, Object> toMap() {
     return {
+      "id": id,
       "content": content,
       "senderId": senderId,
-      "id": id,
       "receiverId": receiverId,
+      "status": status,
       "timestamp": timestamp,
     };
   }
@@ -31,6 +34,7 @@ class Message {
       content: msgData["content"],
       senderId: msgData["senderId"],
       receiverId: msgData["receiverId"],
+      status: msgData["status"],
       timestamp: msgData["timestamp"],
     );
   }
