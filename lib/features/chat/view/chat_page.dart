@@ -120,8 +120,10 @@ class _ChatPageState extends State<ChatPage> {
                     widget.toUser.id,
                   ),
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) print(snapshot.error.toString());
                     if (!snapshot.hasData) return Container();
                     final messages = snapshot.data!;
+                    print(messages);
                     return Align(
                       alignment: Alignment.topCenter,
                       child: ListView.builder(
@@ -190,17 +192,8 @@ class _ChatPageState extends State<ChatPage> {
                                       ),
                                       Container(
                                         margin: const EdgeInsets.only(left: 2),
-                                        child: message.status != "PENDING"
-                                            ? const Icon(
-                                                Icons.check_rounded,
-                                                size: 16,
-                                                color: AppColorsDark.textColor2,
-                                              )
-                                            : const Icon(
-                                                Icons.punch_clock_rounded,
-                                                size: 16,
-                                                color: AppColorsDark.textColor2,
-                                              ),
+                                        child: getMessageStatusWidet(
+                                            message.status),
                                       )
                                     ],
                                   ),
@@ -337,19 +330,22 @@ class _ChatPageState extends State<ChatPage> {
                                   content: msg,
                                   senderId: widget.fromUser.id,
                                   receiverId: widget.toUser.id,
-                                  status: "PENDING",
+                                  status: "",
                                   timestamp: Timestamp.now(),
                                 );
 
                                 await FirestoreDatabase.sendMessage(message)
-                                    .then(
-                                  (value) async {
-                                    await FirestoreDatabase.changeMessageStatus(
-                                      message,
-                                      "SENT",
-                                    );
-                                  },
-                                );
+                                    .then((value) async {
+                                  await FirestoreDatabase.changeMessageStatus(
+                                    message,
+                                    "SENT",
+                                  );
+                                }).onError((error, stackTrace) async {
+                                  await FirestoreDatabase.changeMessageStatus(
+                                    message,
+                                    "PENDING",
+                                  );
+                                });
                               },
                               child: const Icon(
                                 Icons.send_rounded,
@@ -368,4 +364,24 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
+}
+
+Widget getMessageStatusWidet(String status) {
+  if (status != "PENDING" && status != "SENT" && status != "") {
+    return const Image(
+      image: AssetImage("assets/images/SEEN.png"),
+      width: 16,
+    );
+  } else if (status != "PENDING" && status != "") {
+    return const Icon(
+      Icons.check_rounded,
+      size: 16,
+      color: AppColorsDark.textColor2,
+    );
+  }
+  return const Icon(
+    Icons.punch_clock_rounded,
+    size: 16,
+    color: AppColorsDark.textColor2,
+  );
 }

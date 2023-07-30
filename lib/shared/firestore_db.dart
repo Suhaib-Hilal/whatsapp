@@ -90,11 +90,16 @@ class FirestoreDatabase {
         .orderBy("timestamp", descending: true)
         .where("senderId", whereIn: [selfId, otherId])
         .snapshots()
-        .map(
-          (event) {
+        .asyncMap(
+          (event) async {
             final messages = <Message>[];
             for (var docSnap in event.docs) {
-              messages.add(Message.fromMap(docSnap.data()));
+              var message = Message.fromMap(docSnap.data());
+              messages.add(message);
+
+              if (message.senderId == otherId && message.status != "SEEN") {
+                await changeMessageStatus(message, "SEEN");
+              }
             }
             return messages;
           },
