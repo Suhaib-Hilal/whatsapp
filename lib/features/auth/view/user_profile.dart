@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -139,8 +138,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                             ),
                                             text: "Camera",
                                             callback: (file) {
-                                              setState(
-                                                  () => selectedImage = file);
+                                              setState(() {
+                                                selectedImage = file;
+                                              });
                                               Navigator.pop(context);
                                             },
                                           ),
@@ -260,6 +260,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 );
                               } else if (snapshot.hasError) {
                                 text = "Oops, an error occured";
+                                print(snapshot.error.toString());
                                 icon = Container(
                                   decoration: const BoxDecoration(
                                     color: AppColorsDark.errorSnackBarColor,
@@ -373,7 +374,7 @@ class PhotoOption extends StatelessWidget {
         GestureDetector(
           onTap: () async {
             XFile? image =
-                await ImagePicker().pickImage(source: getImageSource());
+                await getSelectedImage();
             if (image == null) {
               return;
             }

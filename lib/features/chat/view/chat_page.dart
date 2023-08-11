@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
-import 'package:whatsappclone/features/chat/model/message.dart';
+import 'package:whatsappclone/features/chat/model/attachment.dart';
+import 'package:whatsappclone/shared/firebase_storage.dart';
 import 'package:whatsappclone/shared/firestore_db.dart';
 import 'package:whatsappclone/shared/user.dart';
 import 'package:whatsappclone/theme/color_theme.dart';
@@ -61,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
                   stream: FirestoreDatabase.getUserStatus(widget.toUser.id),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData || snapshot.data == "Offline") {
-                      return const Text("");
+                      return const SizedBox();
                     }
 
                     return Text(
@@ -123,10 +128,10 @@ class _ChatPageState extends State<ChatPage> {
                     if (snapshot.hasError) print(snapshot.error.toString());
                     if (!snapshot.hasData) return Container();
                     final messages = snapshot.data!;
-                    print(messages);
                     return Align(
                       alignment: Alignment.topCenter,
                       child: ListView.builder(
+                        addAutomaticKeepAlives: true,
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
@@ -141,64 +146,9 @@ class _ChatPageState extends State<ChatPage> {
                             alignment: isOwnMessage
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
-                            child: Container(
-                              constraints: BoxConstraints(
-                                minWidth: 40,
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.80,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12.0),
-                                color: isOwnMessage
-                                    ? AppColorsDark.outgoingMessageBubbleColor
-                                    : AppColorsDark.incomingMessageBubbleColor,
-                              ),
-                              margin: const EdgeInsets.only(bottom: 3),
-                              padding: const EdgeInsets.all(8),
-                              child: Stack(
-                                alignment: Alignment.bottomRight,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            message.content.length > 40
-                                                ? message.content
-                                                : message.content + " " * 12,
-                                            style: const TextStyle(
-                                              color: AppColorsDark.textColor1,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        formattedTimestamp(
-                                          message.timestamp,
-                                          onlyTime: true,
-                                        ),
-                                        style: const TextStyle(
-                                          color: AppColorsDark.textColor2,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      Container(
-                                        margin: const EdgeInsets.only(left: 2),
-                                        child: getMessageStatusWidet(
-                                            message.status),
-                                      )
-                                    ],
-                                  ),
-                                ],
-                              ),
+                            child: MessageCard(
+                              message: message,
+                              ownMessage: isOwnMessage,
                             ),
                           );
                         },
@@ -291,14 +241,34 @@ class _ChatPageState extends State<ChatPage> {
                                 ? const SizedBox(width: 20)
                                 : const SizedBox(),
                             messageTextController.text.isEmpty
-                                ? Container(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 10,
-                                    ),
-                                    child: const Icon(
-                                      Icons.camera_alt_rounded,
-                                      color: AppColorsDark.iconColor,
-                                      size: 24,
+                                ? GestureDetector(
+                                    onTap: () async {
+                                      XFile? image = await getSelectedImage();
+                                      if (image == null) {
+                                        return;
+                                      }
+                                      if (!mounted) return;
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: ((context) {
+                                            return SelectedImagePage(
+                                              selectedImg: image,
+                                              fromUser: widget.fromUser,
+                                              toUser: widget.toUser,
+                                            );
+                                          }),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt_rounded,
+                                        color: AppColorsDark.iconColor,
+                                        size: 24,
+                                      ),
                                     ),
                                   )
                                 : const SizedBox(),
@@ -327,6 +297,10 @@ class _ChatPageState extends State<ChatPage> {
 
                                 final message = Message(
                                   id: const Uuid().v4(),
+                                  attachment: const Attachment(
+                                    attachmentType: "",
+                                    attachmentValue: "",
+                                  ),
                                   content: msg,
                                   senderId: widget.fromUser.id,
                                   receiverId: widget.toUser.id,
@@ -334,13 +308,14 @@ class _ChatPageState extends State<ChatPage> {
                                   timestamp: Timestamp.now(),
                                 );
 
-                                await FirestoreDatabase.sendMessage(message)
+                                FirestoreDatabase.sendMessage(message)
                                     .then((value) async {
                                   await FirestoreDatabase.changeMessageStatus(
                                     message,
                                     "SENT",
                                   );
                                 }).onError((error, stackTrace) async {
+                                  print(error);
                                   await FirestoreDatabase.changeMessageStatus(
                                     message,
                                     "PENDING",
@@ -366,6 +341,369 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
+class MessageCard extends StatefulWidget {
+  final Message message;
+  final bool ownMessage;
+  const MessageCard(
+      {super.key, required this.message, required this.ownMessage});
+
+  @override
+  State<MessageCard> createState() => _MessageCardState();
+}
+
+class _MessageCardState extends State<MessageCard>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    final messageColor = widget.ownMessage
+        ? AppColorsDark.outgoingMessageBubbleColor
+        : AppColorsDark.incomingMessageBubbleColor;
+
+    return Container(
+      constraints: BoxConstraints(
+        minWidth: 40,
+        maxWidth: MediaQuery.of(context).size.width * 0.80,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12.0),
+        color: messageColor,
+      ),
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.all(4),
+      child: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.message.attachment.attachmentValue.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: widget.message.attachment.attachmentValue,
+                  ),
+                )
+              ],
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 8.0,
+                  top: 4,
+                  bottom: 4,
+                  right: 4,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        widget.message.content.length > 40
+                            ? widget.message.content
+                            : widget.ownMessage
+                                ? widget.message.content + " " * 14
+                                : widget.message.content + " " * 10,
+                        style: const TextStyle(
+                          color: AppColorsDark.textColor1,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                formattedTimestamp(
+                  widget.message.timestamp,
+                  onlyTime: true,
+                ),
+                style: const TextStyle(
+                  color: AppColorsDark.textColor2,
+                  fontSize: 12,
+                ),
+              ),
+              widget.ownMessage
+                  ? Container(
+                      margin: const EdgeInsets.only(
+                        left: 4,
+                      ),
+                      child: getMessageStatusWidet(
+                        widget.message.status,
+                      ),
+                    )
+                  : const SizedBox(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SelectedImagePage extends StatefulWidget {
+  final XFile selectedImg;
+  final User fromUser;
+  final User toUser;
+  const SelectedImagePage({
+    super.key,
+    required this.selectedImg,
+    required this.fromUser,
+    required this.toUser,
+  });
+
+  @override
+  State<SelectedImagePage> createState() => _SelectedImagePageState();
+}
+
+class _SelectedImagePageState extends State<SelectedImagePage> {
+  TextEditingController captionTextController = TextEditingController(
+    text: "",
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      backgroundColor: Colors.black,
+      body: Container(
+        padding: const EdgeInsets.only(top: 50),
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: FileImage(
+              File(widget.selectedImg.path),
+            ),
+            fit: BoxFit.fitWidth,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Align(
+              alignment: Alignment.topCenter,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: 10),
+                    child: Opacity(
+                      opacity: 0.8,
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: AppColorsDark.backgroundColor,
+                        child: Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Opacity(
+                        opacity: 0.8,
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColorsDark.backgroundColor,
+                          child: Icon(
+                            Icons.crop_rotate_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Opacity(
+                        opacity: 0.8,
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColorsDark.backgroundColor,
+                          child: Icon(
+                            Icons.sticky_note_2_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Opacity(
+                        opacity: 0.8,
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColorsDark.backgroundColor,
+                          child: Text(
+                            "T",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Opacity(
+                        opacity: 0.8,
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColorsDark.backgroundColor,
+                          child: Icon(
+                            Icons.edit_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              color: AppColorsDark.appBarColor,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: const Icon(
+                                    Icons.add_photo_alternate_rounded,
+                                    color: AppColorsDark.textColor1,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(
+                                  width: 10,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    minLines: 1,
+                                    maxLines: 999,
+                                    controller: captionTextController,
+                                    cursorColor: AppColorsDark.greenColor,
+                                    style: const TextStyle(
+                                      color: AppColorsDark.textColor1,
+                                      fontSize: 18,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: "Add a caption...",
+                                      hintStyle: TextStyle(
+                                        color: AppColorsDark.textColor2,
+                                      ),
+                                      border: InputBorder.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      color: AppColorsDark.backgroundColor.withOpacity(0.3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: AppColorsDark.appBarColor,
+                            ),
+                            child: Text(widget.toUser.name),
+                          ),
+                          GestureDetector(
+                            onTap: () async {
+                              final id = const Uuid().v4();
+                              final url = await FirebaseStorageUtil.uploadFile(
+                                "attachments/$id",
+                                File(widget.selectedImg.path),
+                              );
+
+                              final message = Message(
+                                id: id,
+                                attachment: Attachment(
+                                  attachmentType: "Image",
+                                  attachmentValue: url,
+                                ),
+                                content: captionTextController.text,
+                                senderId: widget.fromUser.id,
+                                receiverId: widget.toUser.id,
+                                status: "",
+                                timestamp: Timestamp.now(),
+                              );
+
+                              FirestoreDatabase.sendMessage(message)
+                                  .then((value) async {
+                                await FirestoreDatabase.changeMessageStatus(
+                                  message,
+                                  "SENT",
+                                );
+                              }).onError((error, stackTrace) async {
+                                print(error);
+                                await FirestoreDatabase.changeMessageStatus(
+                                  message,
+                                  "PENDING",
+                                );
+                              });
+                              if (!mounted) return;
+                              Navigator.of(context).pop();
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 10),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColorsDark.greenColor,
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: const Icon(
+                                Icons.send_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Widget getMessageStatusWidet(String status) {
   if (status != "PENDING" && status != "SENT" && status != "") {
     return const Image(
@@ -373,15 +711,15 @@ Widget getMessageStatusWidet(String status) {
       width: 16,
     );
   } else if (status != "PENDING" && status != "") {
-    return const Icon(
-      Icons.check_rounded,
-      size: 16,
-      color: AppColorsDark.textColor2,
+    return const Image(
+      image: AssetImage("assets/images/SENT.png"),
+      width: 16,
+      color: AppColorsDark.textColor1,
     );
   }
-  return const Icon(
-    Icons.punch_clock_rounded,
-    size: 16,
-    color: AppColorsDark.textColor2,
+  return const Image(
+    image: AssetImage("assets/images/PENDING.png"),
+    width: 16,
+    color: AppColorsDark.textColor1,
   );
 }

@@ -1,4 +1,4 @@
-import 'package:whatsappclone/features/chat/model/message.dart';
+import 'package:whatsappclone/features/chat/model/attachment.dart';
 import 'package:whatsappclone/shared/user.dart';
 
 class RecentChat {

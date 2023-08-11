@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:whatsappclone/features/chat/model/message.dart';
+import 'package:whatsappclone/features/chat/model/attachment.dart';
 import 'package:whatsappclone/features/home/model/recent_chat.dart';
 import 'package:whatsappclone/shared/user.dart';
 

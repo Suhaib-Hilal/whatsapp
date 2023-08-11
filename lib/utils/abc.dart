@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 String formattedTime(int time) {
@@ -61,4 +62,8 @@ Future<String> getUserStatus() async {
 
 void sendMessage(String phoneNumber, String message) async {
   await launchUrl(Uri.parse('sms:$phoneNumber?body=$message'));
+}
+
+Future<XFile?> getSelectedImage() async {
+  return ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 50);
 }
