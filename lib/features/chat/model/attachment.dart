@@ -3,14 +3,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Attachment {
   final String attachmentType;
   final String attachmentValue;
+  final double width;
+  final double height;
 
   const Attachment(
-      {required this.attachmentType, required this.attachmentValue});
+      {required this.attachmentType,
+      required this.attachmentValue,
+      required this.width,
+      required this.height});
 
   Map<String, Object> toMap() {
     return {
       "attachmentType": attachmentType,
       "attachmentValue": attachmentValue,
+      "width": width,
+      "height": height,
     };
   }
 
@@ -18,6 +25,8 @@ class Attachment {
     return Attachment(
       attachmentType: msgData["attachmentType"],
       attachmentValue: msgData["attachmentValue"],
+      width: msgData["width"] ?? 0,
+      height: msgData["height"] ?? 0,
     );
   }
 }

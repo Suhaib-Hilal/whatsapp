@@ -374,7 +374,7 @@ class PhotoOption extends StatelessWidget {
         GestureDetector(
           onTap: () async {
             XFile? image =
-                await getSelectedImage();
+                await getSelectedImage(text);
             if (image == null) {
               return;
             }

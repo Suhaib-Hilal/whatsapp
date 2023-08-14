@@ -1,6 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 String formattedTime(int time) {
@@ -64,6 +67,18 @@ void sendMessage(String phoneNumber, String message) async {
   await launchUrl(Uri.parse('sms:$phoneNumber?body=$message'));
 }
 
-Future<XFile?> getSelectedImage() async {
-  return ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 50);
+Future<(double, double)> getImageDimensions(File imageFile) async {
+  final bytes = await imageFile.readAsBytes();
+  final image = await decodeImageFromList(bytes);
+  image.dispose();
+
+  return (image.width.toDouble(), image.height.toDouble());
+}
+
+Future<XFile?> getSelectedImage(String text) async {
+  if (text == "Camera") {
+    return ImagePicker()
+        .pickImage(source: ImageSource.camera, imageQuality: 50);
+  }
+  return ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 50);
 }

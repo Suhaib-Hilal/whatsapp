@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,6 +26,79 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   TextEditingController messageTextController = TextEditingController(text: "");
   int maxLines = 1;
+  List<Widget> _popupMenuItems() {
+    return [
+      AttachmentOption(
+        icon: Icons.edit_document,
+        text: "Document",
+        color: Colors.purple,
+        onTap: () {},
+      ),
+      AttachmentOption(
+          icon: Icons.camera_alt_rounded,
+          text: "Camera",
+          color: Colors.pink,
+          onTap: () async {
+            XFile? image = await getSelectedImage("Camera");
+            if (image == null) {
+              return;
+            }
+            if (!mounted) return;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: ((context) {
+                  return SelectedImagePage(
+                    selectedImg: image,
+                    fromUser: widget.fromUser,
+                    toUser: widget.toUser,
+                  );
+                }),
+              ),
+            );
+          }),
+      AttachmentOption(
+        icon: Icons.photo_rounded,
+        text: "Gallery",
+        color: const Color.fromARGB(255, 250, 149, 240),
+        onTap: () async {
+          XFile? image = await getSelectedImage("Gallery");
+          if (image == null) {
+            return;
+          }
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: ((context) {
+                return SelectedImagePage(
+                  selectedImg: image,
+                  fromUser: widget.fromUser,
+                  toUser: widget.toUser,
+                );
+              }),
+            ),
+          );
+        },
+      ),
+      AttachmentOption(
+        icon: Icons.headphones,
+        text: "Audio",
+        color: Colors.orange,
+        onTap: () {},
+      ),
+      AttachmentOption(
+        icon: Icons.person,
+        text: "Contact",
+        color: AppColorsDark.blueColor,
+        onTap: () {},
+      ),
+      AttachmentOption(
+        icon: Icons.location_on,
+        text: "Location",
+        color: AppColorsDark.greenColor,
+        onTap: () {},
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,12 +284,78 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                             Transform.rotate(
                               angle: -0.7,
-                              child: Container(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: const Icon(
-                                  Icons.attach_file,
-                                  color: AppColorsDark.iconColor,
-                                  size: 26,
+                              child: GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return Container(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 60),
+                                        child: Dialog(
+                                          alignment: Alignment.bottomCenter,
+                                          backgroundColor:
+                                              AppColorsDark.backgroundColor,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(16.0),
+                                          ),
+                                          insetPadding: EdgeInsets.only(
+                                            left: 12.0,
+                                            right: 12.0,
+                                            top: MediaQuery.of(context)
+                                                    .size
+                                                    .height *
+                                                (Platform.isIOS ? 0.54 : 0.4),
+                                          ),
+                                          insetAnimationCurve:
+                                              Curves.easeInOutQuad,
+                                          insetAnimationDuration:
+                                              const Duration(milliseconds: 500),
+                                          elevation: 0,
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 32.0,
+                                              vertical: 18.0,
+                                            ),
+                                            child: GridView.count(
+                                              crossAxisCount: 3,
+                                              shrinkWrap: true,
+                                              children: [
+                                                for (var i = 0;
+                                                    i <
+                                                        _popupMenuItems()
+                                                            .length;
+                                                    i++) ...[
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      Navigator.of(context)
+                                                          .pop();
+                                                    },
+                                                    child: Card(
+                                                      color: AppColorsDark
+                                                          .backgroundColor,
+                                                      elevation: 0,
+                                                      child:
+                                                          _popupMenuItems()[i],
+                                                    ),
+                                                  )
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: const Icon(
+                                    Icons.attach_file,
+                                    color: AppColorsDark.iconColor,
+                                    size: 26,
+                                  ),
                                 ),
                               ),
                             ),
@@ -225,7 +365,7 @@ class _ChatPageState extends State<ChatPage> {
                             messageTextController.text.isEmpty
                                 ? Container(
                                     padding: const EdgeInsets.all(2),
-                                    margin: const EdgeInsets.only(bottom: 10),
+                                    margin: const EdgeInsets.only(bottom: 12),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(50),
                                       color: AppColorsDark.iconColor,
@@ -243,7 +383,8 @@ class _ChatPageState extends State<ChatPage> {
                             messageTextController.text.isEmpty
                                 ? GestureDetector(
                                     onTap: () async {
-                                      XFile? image = await getSelectedImage();
+                                      XFile? image =
+                                          await getSelectedImage("Camera");
                                       if (image == null) {
                                         return;
                                       }
@@ -300,6 +441,8 @@ class _ChatPageState extends State<ChatPage> {
                                   attachment: const Attachment(
                                     attachmentType: "",
                                     attachmentValue: "",
+                                    width: 0,
+                                    height: 0,
                                   ),
                                   content: msg,
                                   senderId: widget.fromUser.id,
@@ -341,6 +484,49 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
+class AttachmentOption extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  final Function() onTap;
+  const AttachmentOption({
+    super.key,
+    required this.icon,
+    required this.text,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              icon,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            text,
+            style: const TextStyle(
+              color: AppColorsDark.iconColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MessageCard extends StatefulWidget {
   final Message message;
   final bool ownMessage;
@@ -364,10 +550,25 @@ class _MessageCardState extends State<MessageCard>
         ? AppColorsDark.outgoingMessageBubbleColor
         : AppColorsDark.incomingMessageBubbleColor;
 
+    final imgWidth = widget.message.attachment.width;
+    final imgHeight = widget.message.attachment.height;
+    final aspectRatio = imgWidth / imgHeight;
+    final maxWidth = MediaQuery.of(context).size.width * 0.80;
+
+    double width;
+    double height;
+    if (imgHeight > imgWidth) {
+      height = min(imgHeight, 300);
+      width = max(height * aspectRatio, 200);
+    } else {
+      width = min(imgWidth, maxWidth);
+      height = width / aspectRatio;
+    }
+
     return Container(
       constraints: BoxConstraints(
         minWidth: 40,
-        maxWidth: MediaQuery.of(context).size.width * 0.80,
+        maxWidth: maxWidth,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
@@ -386,6 +587,8 @@ class _MessageCardState extends State<MessageCard>
                   borderRadius: BorderRadius.circular(12),
                   child: CachedNetworkImage(
                     imageUrl: widget.message.attachment.attachmentValue,
+                    width: width,
+                    height: height,
                   ),
                 )
               ],
@@ -642,16 +845,21 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                           GestureDetector(
                             onTap: () async {
                               final id = const Uuid().v4();
+                              final imageFile = File(widget.selectedImg.path);
                               final url = await FirebaseStorageUtil.uploadFile(
                                 "attachments/$id",
-                                File(widget.selectedImg.path),
+                                imageFile,
                               );
+                              final dimensions =
+                                  await getImageDimensions(imageFile);
 
                               final message = Message(
                                 id: id,
                                 attachment: Attachment(
                                   attachmentType: "Image",
                                   attachmentValue: url,
+                                  width: dimensions.$1,
+                                  height: dimensions.$2,
                                 ),
                                 content: captionTextController.text,
                                 senderId: widget.fromUser.id,
