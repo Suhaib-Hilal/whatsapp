@@ -433,6 +433,8 @@ class _ChatPageState extends State<ChatPage> {
                           : GestureDetector(
                               onTap: () async {
                                 final msg = messageTextController.text;
+                                if (msg.isEmpty) return;
+
                                 messageTextController.text = "";
                                 setState(() {});
 
@@ -553,18 +555,21 @@ class _MessageCardState extends State<MessageCard>
     final imgWidth = widget.message.attachment.width;
     final imgHeight = widget.message.attachment.height;
     final aspectRatio = imgWidth / imgHeight;
-    final maxWidth = MediaQuery.of(context).size.width * 0.80;
+    final maxWidth = MediaQuery.of(context).size.width * 0.8;
 
     double width;
     double height;
     if (imgHeight > imgWidth) {
-      height = min(imgHeight, 300);
-      width = max(height * aspectRatio, 200);
+      height = min(imgHeight, MediaQuery.of(context).size.height * 0.4);
+      width = max(height * aspectRatio, 0.8 * maxWidth);
     } else {
       width = min(imgWidth, maxWidth);
       height = width / aspectRatio;
     }
 
+    var hasAttachment = widget.message.attachment.attachmentValue.isNotEmpty;
+    var isImage =
+        widget.message.attachment.attachmentType.toLowerCase() == "image";
     return Container(
       constraints: BoxConstraints(
         minWidth: 40,
@@ -582,68 +587,92 @@ class _MessageCardState extends State<MessageCard>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (widget.message.attachment.attachmentValue.isNotEmpty) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: widget.message.attachment.attachmentValue,
-                    width: width,
-                    height: height,
-                  ),
-                )
+              if (hasAttachment) ...[
+                if (isImage) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(
+                      imageUrl: widget.message.attachment.attachmentValue,
+                      width: width,
+                      height: height,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                ]
               ],
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 8.0,
-                  top: 4,
-                  bottom: 4,
-                  right: 4,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        widget.message.content.length > 40
-                            ? widget.message.content
-                            : widget.ownMessage
-                                ? widget.message.content + " " * 14
-                                : widget.message.content + " " * 10,
-                        style: const TextStyle(
-                          color: AppColorsDark.textColor1,
-                          fontSize: 16,
+              if (hasAttachment && widget.message.content.isNotEmpty ||
+                  widget.message.content.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 8.0,
+                    top: 4,
+                    bottom: 4,
+                    right: 4,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          widget.message.content.trim().length > 40
+                              ? widget.message.content.trim()
+                              : widget.ownMessage
+                                  ? widget.message.content.trim() + " " * 14
+                                  : widget.message.content.trim() + " " * 10,
+                          style: const TextStyle(
+                            color: AppColorsDark.textColor1,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ]
             ],
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                formattedTimestamp(
-                  widget.message.timestamp,
-                  onlyTime: true,
+          Container(
+            margin: hasAttachment && widget.message.content.isEmpty ||
+                    widget.message.content.isEmpty
+                ? const EdgeInsets.only(bottom: 8)
+                : null,
+            decoration: hasAttachment && widget.message.content.isEmpty ||
+                    widget.message.content.isEmpty
+                ? const BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color.fromARGB(255, 28, 31, 32),
+                        blurRadius: 22,
+                        spreadRadius: 4,
+                      )
+                    ],
+                  )
+                : null,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  formattedTimestamp(
+                    widget.message.timestamp,
+                    onlyTime: true,
+                  ),
+                  style: const TextStyle(
+                    color: AppColorsDark.textColor2,
+                    fontSize: 12,
+                  ),
                 ),
-                style: const TextStyle(
-                  color: AppColorsDark.textColor2,
-                  fontSize: 12,
-                ),
-              ),
-              widget.ownMessage
-                  ? Container(
-                      margin: const EdgeInsets.only(
-                        left: 4,
-                      ),
-                      child: getMessageStatusWidet(
-                        widget.message.status,
-                      ),
-                    )
-                  : const SizedBox(),
-            ],
+                widget.ownMessage
+                    ? Container(
+                        margin: const EdgeInsets.only(
+                          left: 4,
+                        ),
+                        child: getMessageStatusWidet(
+                          widget.message.status,
+                        ),
+                      )
+                    : const SizedBox(),
+              ],
+            ),
           ),
         ],
       ),
