@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:math';
 
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,6 +26,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   TextEditingController messageTextController = TextEditingController(text: "");
+
   int maxLines = 1;
   List<Widget> _popupMenuItems() {
     return [
@@ -103,6 +105,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColorsDark.backgroundColor,
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
@@ -187,36 +190,39 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(
-                  top: 8.0,
-                  bottom: 20,
-                  left: 12,
-                  right: 12,
-                ),
-                child: StreamBuilder(
-                  stream: FirestoreDatabase.getChatMessages(
-                    widget.fromUser.id,
-                    widget.toUser.id,
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    bottom: 20,
+                    left: 12,
+                    right: 12,
                   ),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) print(snapshot.error.toString());
-                    if (!snapshot.hasData) return Container();
-                    final messages = snapshot.data!;
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ListView.builder(
+                  child: StreamBuilder(
+                    stream: FirestoreDatabase.getChatMessages(
+                      widget.fromUser.id,
+                      widget.toUser.id,
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        print(snapshot.error.toString());
+                      }
+                      if (!snapshot.hasData) return Container();
+
+                      final messages = snapshot.data!;
+
+                      return ListView.builder(
                         addAutomaticKeepAlives: true,
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
-                        reverse: true,
                         shrinkWrap: true,
                         itemCount: messages.length,
+                        reverse: true,
                         itemBuilder: (context, index) {
                           final message = messages[index];
                           final isOwnMessage =
                               widget.fromUser.id == message.senderId;
                           return Align(
+                            key: ValueKey(message.id),
                             alignment: isOwnMessage
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
@@ -226,257 +232,281 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           );
                         },
-                      ),
-                    );
-                  },
-                ),
-              ),
+                        findChildIndexCallback: (key) {
+                          final id = (key as ValueKey).value;
+                          return messages.indexWhere(
+                            (message) => message.id == id,
+                          );
+                        },
+                      );
+                      // [3, 2, 1]
+                      // [4, 3, 2, 1]
+                    },
+                  )),
             ),
             Align(
               alignment: Alignment.bottomCenter,
-              child: Container(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          color: AppColorsDark.appBarColor,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: const Icon(
-                                Icons.emoji_emotions,
-                                color: AppColorsDark.iconColor,
-                                size: 28,
-                              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
                             ),
-                            const SizedBox(
-                              width: 10,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              color: AppColorsDark.appBarColor,
                             ),
-                            Expanded(
-                              child: TextField(
-                                onChanged: (value) => setState(() {}),
-                                minLines: 1,
-                                maxLines: 999,
-                                controller: messageTextController,
-                                cursorColor: AppColorsDark.greenColor,
-                                style: const TextStyle(
-                                  color: AppColorsDark.textColor1,
-                                  fontSize: 18,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: "Message",
-                                  hintStyle: TextStyle(
-                                    color: AppColorsDark.greyColor,
-                                  ),
-                                  border: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                            Transform.rotate(
-                              angle: -0.7,
-                              child: GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return Container(
-                                        margin:
-                                            const EdgeInsets.only(bottom: 60),
-                                        child: Dialog(
-                                          alignment: Alignment.bottomCenter,
-                                          backgroundColor:
-                                              AppColorsDark.backgroundColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(16.0),
-                                          ),
-                                          insetPadding: EdgeInsets.only(
-                                            left: 12.0,
-                                            right: 12.0,
-                                            top: MediaQuery.of(context)
-                                                    .size
-                                                    .height *
-                                                (Platform.isIOS ? 0.54 : 0.4),
-                                          ),
-                                          insetAnimationCurve:
-                                              Curves.easeInOutQuad,
-                                          insetAnimationDuration:
-                                              const Duration(milliseconds: 500),
-                                          elevation: 0,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 32.0,
-                                              vertical: 18.0,
-                                            ),
-                                            child: GridView.count(
-                                              crossAxisCount: 3,
-                                              shrinkWrap: true,
-                                              children: [
-                                                for (var i = 0;
-                                                    i <
-                                                        _popupMenuItems()
-                                                            .length;
-                                                    i++) ...[
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                    },
-                                                    child: Card(
-                                                      color: AppColorsDark
-                                                          .backgroundColor,
-                                                      elevation: 0,
-                                                      child:
-                                                          _popupMenuItems()[i],
-                                                    ),
-                                                  )
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                child: Container(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: const Icon(
-                                    Icons.attach_file,
+                                    Icons.emoji_emotions,
                                     color: AppColorsDark.iconColor,
-                                    size: 26,
+                                    size: 28,
                                   ),
                                 ),
-                              ),
-                            ),
-                            messageTextController.text.isEmpty
-                                ? const SizedBox(width: 20)
-                                : const SizedBox(),
-                            messageTextController.text.isEmpty
-                                ? Container(
-                                    padding: const EdgeInsets.all(2),
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(50),
-                                      color: AppColorsDark.iconColor,
+                                const SizedBox(
+                                  width: 10,
+                                ),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (value) => setState(() {}),
+                                    minLines: 1,
+                                    maxLines: 999,
+                                    controller: messageTextController,
+                                    cursorColor: AppColorsDark.greenColor,
+                                    style: const TextStyle(
+                                      color: AppColorsDark.textColor1,
+                                      fontSize: 18,
                                     ),
-                                    child: const Icon(
-                                      Icons.currency_rupee_rounded,
-                                      color: AppColorsDark.appBarColor,
-                                      size: 20,
+                                    decoration: const InputDecoration(
+                                      hintText: "Message",
+                                      hintStyle: TextStyle(
+                                        color: AppColorsDark.greyColor,
+                                      ),
+                                      border: InputBorder.none,
                                     ),
-                                  )
-                                : const SizedBox(),
-                            messageTextController.text.isEmpty
-                                ? const SizedBox(width: 20)
-                                : const SizedBox(),
-                            messageTextController.text.isEmpty
-                                ? GestureDetector(
-                                    onTap: () async {
-                                      XFile? image =
-                                          await getSelectedImage("Camera");
-                                      if (image == null) {
-                                        return;
-                                      }
-                                      if (!mounted) return;
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: ((context) {
-                                            return SelectedImagePage(
-                                              selectedImg: image,
-                                              fromUser: widget.fromUser,
-                                              toUser: widget.toUser,
-                                            );
-                                          }),
-                                        ),
+                                  ),
+                                ),
+                                Transform.rotate(
+                                  angle: -0.7,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return Container(
+                                            margin: const EdgeInsets.only(
+                                                bottom: 60),
+                                            child: Dialog(
+                                              alignment: Alignment.bottomCenter,
+                                              backgroundColor:
+                                                  AppColorsDark.backgroundColor,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16.0),
+                                              ),
+                                              insetPadding: EdgeInsets.only(
+                                                left: 12.0,
+                                                right: 12.0,
+                                                top: MediaQuery.of(context)
+                                                        .size
+                                                        .height *
+                                                    (Platform.isIOS
+                                                        ? 0.54
+                                                        : 0.4),
+                                              ),
+                                              insetAnimationCurve:
+                                                  Curves.easeInOutQuad,
+                                              insetAnimationDuration:
+                                                  const Duration(
+                                                      milliseconds: 500),
+                                              elevation: 0,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 32.0,
+                                                  vertical: 18.0,
+                                                ),
+                                                child: GridView.count(
+                                                  crossAxisCount: 3,
+                                                  shrinkWrap: true,
+                                                  children: [
+                                                    for (var i = 0;
+                                                        i <
+                                                            _popupMenuItems()
+                                                                .length;
+                                                        i++) ...[
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          Navigator.of(context)
+                                                              .pop();
+                                                        },
+                                                        child: Card(
+                                                          color: AppColorsDark
+                                                              .backgroundColor,
+                                                          elevation: 0,
+                                                          child:
+                                                              _popupMenuItems()[
+                                                                  i],
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       );
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 10,
-                                      ),
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
                                       child: const Icon(
-                                        Icons.camera_alt_rounded,
+                                        Icons.attach_file,
                                         color: AppColorsDark.iconColor,
-                                        size: 24,
+                                        size: 26,
                                       ),
                                     ),
-                                  )
-                                : const SizedBox(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColorsDark.greenColor,
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: messageTextController.text.isEmpty
-                          ? const Icon(
-                              Icons.mic,
-                              color: Colors.white,
-                              size: 30,
-                            )
-                          : GestureDetector(
-                              onTap: () async {
-                                final msg = messageTextController.text;
-                                if (msg.isEmpty) return;
-
-                                messageTextController.text = "";
-                                setState(() {});
-
-                                final message = Message(
-                                  id: const Uuid().v4(),
-                                  attachment: const Attachment(
-                                    attachmentType: "",
-                                    attachmentValue: "",
-                                    width: 0,
-                                    height: 0,
                                   ),
-                                  content: msg,
-                                  senderId: widget.fromUser.id,
-                                  receiverId: widget.toUser.id,
-                                  status: "",
-                                  timestamp: Timestamp.now(),
-                                );
-
-                                FirestoreDatabase.sendMessage(message)
-                                    .then((value) async {
-                                  await FirestoreDatabase.changeMessageStatus(
-                                    message,
-                                    "SENT",
-                                  );
-                                }).onError((error, stackTrace) async {
-                                  print(error);
-                                  await FirestoreDatabase.changeMessageStatus(
-                                    message,
-                                    "PENDING",
-                                  );
-                                });
-                              },
-                              child: const Icon(
-                                Icons.send_rounded,
-                                color: Colors.white,
-                                size: 30,
-                              ),
+                                ),
+                                messageTextController.text.isEmpty
+                                    ? const SizedBox(width: 20)
+                                    : const SizedBox(),
+                                messageTextController.text.isEmpty
+                                    ? Container(
+                                        padding: const EdgeInsets.all(2),
+                                        margin:
+                                            const EdgeInsets.only(bottom: 12),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(50),
+                                          color: AppColorsDark.iconColor,
+                                        ),
+                                        child: const Icon(
+                                          Icons.currency_rupee_rounded,
+                                          color: AppColorsDark.appBarColor,
+                                          size: 20,
+                                        ),
+                                      )
+                                    : const SizedBox(),
+                                messageTextController.text.isEmpty
+                                    ? const SizedBox(width: 20)
+                                    : const SizedBox(),
+                                messageTextController.text.isEmpty
+                                    ? GestureDetector(
+                                        onTap: () async {
+                                          XFile? image =
+                                              await getSelectedImage("Camera");
+                                          if (image == null) {
+                                            return;
+                                          }
+                                          if (!mounted) return;
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: ((context) {
+                                                return SelectedImagePage(
+                                                  selectedImg: image,
+                                                  fromUser: widget.fromUser,
+                                                  toUser: widget.toUser,
+                                                );
+                                              }),
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 10,
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt_rounded,
+                                            color: AppColorsDark.iconColor,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox(),
+                              ],
                             ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColorsDark.greenColor,
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: messageTextController.text.isEmpty
+                              ? const Icon(
+                                  Icons.mic,
+                                  color: Colors.white,
+                                  size: 30,
+                                )
+                              : GestureDetector(
+                                  onTap: () async {
+                                    final msg = messageTextController.text;
+                                    if (msg.isEmpty) return;
+
+                                    messageTextController.text = "";
+                                    setState(() {});
+
+                                    final message = Message(
+                                      id: const Uuid().v4(),
+                                      attachment: const Attachment(
+                                        attachmentType: "",
+                                        attachmentValue: "",
+                                        fileName: "",
+                                        width: 0,
+                                        height: 0,
+                                      ),
+                                      content: msg,
+                                      senderId: widget.fromUser.id,
+                                      receiverId: widget.toUser.id,
+                                      status: "",
+                                      timestamp: Timestamp.now(),
+                                    );
+
+                                    FirestoreDatabase.sendMessage(message)
+                                        .then((value) async {
+                                      await FirestoreDatabase
+                                          .changeMessageStatus(
+                                        message,
+                                        "SENT",
+                                      );
+                                    }).onError((error, stackTrace) async {
+                                      print(error);
+                                      await FirestoreDatabase
+                                          .changeMessageStatus(
+                                        message,
+                                        "PENDING",
+                                      );
+                                    });
+                                  },
+                                  child: const Icon(
+                                    Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                  ],
-                ),
+                  ),
+                  Container(
+                    height: MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                ],
               ),
             ),
           ],
@@ -541,8 +571,30 @@ class MessageCard extends StatefulWidget {
 
 class _MessageCardState extends State<MessageCard>
     with AutomaticKeepAliveClientMixin {
+  late Future<File?> _doesAttachmentExist = doesAttachmentExist();
+  late final Future<DownloadTask> _downloadFuture = download();
+  bool isDownloading = false;
+
   @override
   bool get wantKeepAlive => true;
+
+  Future<File?> doesAttachmentExist() async {
+    final Directory directory = await getApplicationDocumentsDirectory();
+    final File file =
+        File('${directory.path}/${widget.message.attachment.fileName}');
+    if (await file.exists()) {
+      return file;
+    }
+    return null;
+  }
+
+  Future<DownloadTask> download() async {
+    final attachment = widget.message.attachment;
+    return await FirebaseStorageUtil.downloadFileFromFirebase(
+      attachment.attachmentValue,
+      attachment.fileName,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -556,20 +608,22 @@ class _MessageCardState extends State<MessageCard>
     final imgHeight = widget.message.attachment.height;
     final aspectRatio = imgWidth / imgHeight;
     final maxWidth = MediaQuery.of(context).size.width * 0.8;
+    final maxHeight = MediaQuery.of(context).size.height * 0.4;
 
     double width;
     double height;
     if (imgHeight > imgWidth) {
-      height = min(imgHeight, MediaQuery.of(context).size.height * 0.4);
+      height = min(imgHeight, maxHeight);
       width = max(height * aspectRatio, 0.8 * maxWidth);
     } else {
       width = min(imgWidth, maxWidth);
       height = width / aspectRatio;
     }
 
-    var hasAttachment = widget.message.attachment.attachmentValue.isNotEmpty;
-    var isImage =
+    final hasAttachment = widget.message.attachment.attachmentValue.isNotEmpty;
+    final isImage =
         widget.message.attachment.attachmentType.toLowerCase() == "image";
+
     return Container(
       constraints: BoxConstraints(
         minWidth: 40,
@@ -580,7 +634,7 @@ class _MessageCardState extends State<MessageCard>
         color: messageColor,
       ),
       margin: const EdgeInsets.only(bottom: 3),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(3),
       child: Stack(
         alignment: Alignment.bottomRight,
         children: [
@@ -591,11 +645,83 @@ class _MessageCardState extends State<MessageCard>
                 if (isImage) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: CachedNetworkImage(
-                      imageUrl: widget.message.attachment.attachmentValue,
+                    child: SizedBox(
                       width: width,
                       height: height,
-                      fit: BoxFit.cover,
+                      child: Center(
+                        child: FutureBuilder(
+                          future: _doesAttachmentExist,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const CircularProgressIndicator(
+                                color: AppColorsDark.greenColor,
+                              );
+                            }
+                            final file = snapshot.data;
+                            if (file != null) {
+                              return Image.file(
+                                file,
+                                width: width,
+                                height: height,
+                              );
+                            }
+
+                            return !isDownloading
+                                ? GestureDetector(
+                                    onTap: () =>
+                                        setState(() => isDownloading = true),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                            color: AppColorsDark.greenColor),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      padding: const EdgeInsets.all(2.5),
+                                      child: const Icon(
+                                        Icons.download_rounded,
+                                        color: AppColorsDark.greenColor,
+                                      ),
+                                    ),
+                                  )
+                                : FutureBuilder(
+                                    future: _downloadFuture,
+                                    builder: (context, snap) {
+                                      if (!snap.hasData) {
+                                        return const CircularProgressIndicator();
+                                      }
+
+                                      final downloadTask = snap.data!;
+                                      return FutureBuilder(
+                                        future: () async {
+                                          return await downloadTask;
+                                        }(),
+                                        builder: (context, snap) {
+                                          if (!snap.hasData) {
+                                            return const CircularProgressIndicator();
+                                          }
+
+                                          WidgetsBinding.instance
+                                              .addPostFrameCallback(
+                                            (_) {
+                                              setState(
+                                                () {
+                                                  _doesAttachmentExist =
+                                                      doesAttachmentExist();
+                                                  isDownloading = false;
+                                                },
+                                              );
+                                            },
+                                          );
+
+                                          return const CircularProgressIndicator();
+                                        },
+                                      );
+                                    },
+                                  );
+                          },
+                        ),
+                      ),
                     ),
                   )
                 ]
@@ -875,6 +1001,12 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                             onTap: () async {
                               final id = const Uuid().v4();
                               final imageFile = File(widget.selectedImg.path);
+                              final fileName = imageFile.path.split("/").last;
+                              final Directory directory =
+                                  await getApplicationDocumentsDirectory();
+                              final path = '${directory.path}/$fileName';
+                              await imageFile.copy(path);
+
                               final url = await FirebaseStorageUtil.uploadFile(
                                 "attachments/$id",
                                 imageFile,
@@ -887,6 +1019,7 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                                 attachment: Attachment(
                                   attachmentType: "Image",
                                   attachmentValue: url,
+                                  fileName: fileName,
                                   width: dimensions.$1,
                                   height: dimensions.$2,
                                 ),
@@ -904,7 +1037,6 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                                   "SENT",
                                 );
                               }).onError((error, stackTrace) async {
-                                print(error);
                                 await FirestoreDatabase.changeMessageStatus(
                                   message,
                                   "PENDING",
