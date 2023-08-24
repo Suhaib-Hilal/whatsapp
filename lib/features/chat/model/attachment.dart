@@ -4,6 +4,7 @@ class Attachment {
   final String attachmentType;
   final String attachmentValue;
   final String fileName;
+  final String fileSize;
   final double width;
   final double height;
 
@@ -11,6 +12,7 @@ class Attachment {
     required this.attachmentType,
     required this.attachmentValue,
     required this.fileName,
+    required this.fileSize,
     required this.width,
     required this.height,
   });
@@ -20,6 +22,7 @@ class Attachment {
       "attachmentType": attachmentType,
       "attachmentValue": attachmentValue,
       "fileName": fileName,
+      "fileSize": fileSize,
       "width": width,
       "height": height,
     };
@@ -30,6 +33,7 @@ class Attachment {
       attachmentType: msgData["attachmentType"],
       attachmentValue: msgData["attachmentValue"],
       fileName: msgData["fileName"],
+      fileSize: msgData["fileSize"],
       width: msgData["width"] ?? 0,
       height: msgData["height"] ?? 0,
     );

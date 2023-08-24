@@ -13,6 +13,7 @@ class AppColorsDark {
   static const selectedLabelColor = Color.fromRGBO(5, 165, 133, 1);
   static const unselectedLabelColor = Color.fromRGBO(131, 151, 161, 1);
   static const indicatorColor = Color.fromRGBO(5, 165, 133, 1);
+  static const indicatorBackgroundColor = Color.fromARGB(81, 0, 0, 0);
 
   static const blueColor = Color.fromRGBO(83, 189, 236, 1);
   static const greenColor = Color.fromRGBO(5, 165, 133, 1);

@@ -340,11 +340,13 @@ Future<void> addUserInfo(
   String avatarUrl = 'http://www.gravatar.com/avatar/?d=mp';
 
   if (selectedImage != null) {
-    avatarUrl = await FirebaseStorageUtil.uploadFile(
+    final task = await FirebaseStorageUtil.uploadFile(
       "userAvatars/$id",
       selectedImage,
     );
+    avatarUrl = await task.ref.getDownloadURL();
   }
+
   User user = User(
     name: username,
     id: id,
@@ -373,8 +375,7 @@ class PhotoOption extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () async {
-            XFile? image =
-                await getSelectedImage(text);
+            XFile? image = await getSelectedImage(text);
             if (image == null) {
               return;
             }

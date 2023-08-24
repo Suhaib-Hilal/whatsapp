@@ -189,60 +189,61 @@ class _ChatPageState extends State<ChatPage> {
         child: Column(
           children: [
             Expanded(
-              child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: 8.0,
-                    bottom: 20,
-                    left: 12,
-                    right: 12,
-                  ),
-                  child: StreamBuilder(
-                    stream: FirestoreDatabase.getChatMessages(
-                      widget.fromUser.id,
-                      widget.toUser.id,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                    padding: const EdgeInsets.only(
+                      top: 8.0,
+                      bottom: 20,
+                      left: 12,
+                      right: 12,
                     ),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        print(snapshot.error.toString());
-                      }
-                      if (!snapshot.hasData) return Container();
+                    child: StreamBuilder(
+                      stream: FirestoreDatabase.getChatMessages(
+                        widget.fromUser.id,
+                        widget.toUser.id,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          print(snapshot.error.toString());
+                        }
+                        if (!snapshot.hasData) return Container();
 
-                      final messages = snapshot.data!;
+                        final messages = snapshot.data!;
 
-                      return ListView.builder(
-                        addAutomaticKeepAlives: true,
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        shrinkWrap: true,
-                        itemCount: messages.length,
-                        reverse: true,
-                        itemBuilder: (context, index) {
-                          final message = messages[index];
-                          final isOwnMessage =
-                              widget.fromUser.id == message.senderId;
-                          return Align(
-                            key: ValueKey(message.id),
-                            alignment: isOwnMessage
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: MessageCard(
-                              message: message,
-                              ownMessage: isOwnMessage,
-                            ),
-                          );
-                        },
-                        findChildIndexCallback: (key) {
-                          final id = (key as ValueKey).value;
-                          return messages.indexWhere(
-                            (message) => message.id == id,
-                          );
-                        },
-                      );
-                      // [3, 2, 1]
-                      // [4, 3, 2, 1]
-                    },
-                  )),
+                        return ListView.builder(
+                          addAutomaticKeepAlives: true,
+                          physics: const BouncingScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: messages.length,
+                          reverse: true,
+                          itemBuilder: (context, index) {
+                            final message = messages[index];
+                            final isOwnMessage =
+                                widget.fromUser.id == message.senderId;
+                            return Align(
+                              key: ValueKey(message.id),
+                              alignment: isOwnMessage
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                              child: MessageCard(
+                                message: message,
+                                ownMessage: isOwnMessage,
+                              ),
+                            );
+                          },
+                          findChildIndexCallback: (key) {
+                            final id = (key as ValueKey).value;
+                            return messages.indexWhere(
+                              (message) => message.id == id,
+                            );
+                          },
+                        );
+                        // [3, 2, 1]
+                        // [4, 3, 2, 1]
+                      },
+                    )),
+              ),
             ),
             Align(
               alignment: Alignment.bottomCenter,
@@ -466,6 +467,7 @@ class _ChatPageState extends State<ChatPage> {
                                         attachmentType: "",
                                         attachmentValue: "",
                                         fileName: "",
+                                        fileSize: "",
                                         width: 0,
                                         height: 0,
                                       ),
@@ -572,7 +574,7 @@ class MessageCard extends StatefulWidget {
 class _MessageCardState extends State<MessageCard>
     with AutomaticKeepAliveClientMixin {
   late Future<File?> _doesAttachmentExist = doesAttachmentExist();
-  late final Future<DownloadTask> _downloadFuture = download();
+  late Future<DownloadTask> _downloadFuture;
   bool isDownloading = false;
 
   @override
@@ -621,12 +623,13 @@ class _MessageCardState extends State<MessageCard>
     }
 
     final hasAttachment = widget.message.attachment.attachmentValue.isNotEmpty;
+    final attachment = widget.message.attachment;
     final isImage =
         widget.message.attachment.attachmentType.toLowerCase() == "image";
 
     return Container(
       constraints: BoxConstraints(
-        minWidth: 40,
+        minWidth: 20,
         maxWidth: maxWidth,
       ),
       decoration: BoxDecoration(
@@ -669,52 +672,125 @@ class _MessageCardState extends State<MessageCard>
 
                             return !isDownloading
                                 ? GestureDetector(
-                                    onTap: () =>
-                                        setState(() => isDownloading = true),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                            color: AppColorsDark.greenColor),
-                                        borderRadius: BorderRadius.circular(15),
-                                      ),
-                                      padding: const EdgeInsets.all(2.5),
-                                      child: const Icon(
-                                        Icons.download_rounded,
-                                        color: AppColorsDark.greenColor,
-                                      ),
+                                    onTap: () => setState(() {
+                                      isDownloading = true;
+                                      _downloadFuture = download();
+                                    }),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                                color:
+                                                    AppColorsDark.greenColor),
+                                            borderRadius:
+                                                BorderRadius.circular(15),
+                                          ),
+                                          padding: const EdgeInsets.all(2.5),
+                                          child: const Icon(
+                                            Icons.download_rounded,
+                                            color: AppColorsDark.greenColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Opacity(
+                                          opacity: 0.3,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              color: Colors.black,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 4,
+                                              horizontal: 6,
+                                            ),
+                                            child: Text(attachment.fileSize),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   )
                                 : FutureBuilder(
                                     future: _downloadFuture,
                                     builder: (context, snap) {
                                       if (!snap.hasData) {
-                                        return const CircularProgressIndicator();
+                                        print("ok");
+                                        return const CircularProgressIndicator(
+                                          color: AppColorsDark.greenColor,
+                                        );
                                       }
 
                                       final downloadTask = snap.data!;
-                                      return FutureBuilder(
-                                        future: () async {
-                                          return await downloadTask;
-                                        }(),
+                                      return StreamBuilder(
+                                        stream: downloadTask.snapshotEvents,
                                         builder: (context, snap) {
                                           if (!snap.hasData) {
-                                            return const CircularProgressIndicator();
+                                            return const CircularProgressIndicator(
+                                              color: AppColorsDark.greenColor,
+                                            );
                                           }
 
-                                          WidgetsBinding.instance
-                                              .addPostFrameCallback(
-                                            (_) {
+                                          final data = snap.data;
+                                          if (data == null) {
+                                            return const CircularProgressIndicator(
+                                              color: AppColorsDark.greenColor,
+                                            );
+                                          }
+
+                                          final progress =
+                                              data.bytesTransferred /
+                                                  data.totalBytes;
+                                          if (progress == 1.0) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback(
+                                              (_) {
+                                                setState(
+                                                  () {
+                                                    _doesAttachmentExist =
+                                                        doesAttachmentExist();
+                                                    isDownloading = false;
+                                                  },
+                                                );
+                                              },
+                                            );
+                                          }
+
+                                          print(progress);
+                                          return GestureDetector(
+                                            onTap: () async {
+                                              print("Clicked");
+                                              final task =
+                                                  await _downloadFuture;
+                                              task.cancel();
+
                                               setState(
                                                 () {
-                                                  _doesAttachmentExist =
-                                                      doesAttachmentExist();
                                                   isDownloading = false;
                                                 },
                                               );
                                             },
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.close_rounded,
+                                                  color:
+                                                      AppColorsDark.iconColor,
+                                                ),
+                                                CircularProgressIndicator(
+                                                  color:
+                                                      AppColorsDark.greenColor,
+                                                  value: progress,
+                                                  strokeWidth: 4,
+                                                  backgroundColor: AppColorsDark
+                                                      .indicatorBackgroundColor,
+                                                ),
+                                              ],
+                                            ),
                                           );
-
-                                          return const CircularProgressIndicator();
                                         },
                                       );
                                     },
@@ -1007,10 +1083,16 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                               final path = '${directory.path}/$fileName';
                               await imageFile.copy(path);
 
-                              final url = await FirebaseStorageUtil.uploadFile(
+                              final task = await FirebaseStorageUtil.uploadFile(
                                 "attachments/$id",
                                 imageFile,
                               );
+                              final url = await task.ref.getDownloadURL();
+                              print("URL ============> $url");
+
+                              final sizeInBytes = await imageFile.length();
+                              String fileSize = getFormattedSize(sizeInBytes);
+
                               final dimensions =
                                   await getImageDimensions(imageFile);
 
@@ -1019,6 +1101,7 @@ class _SelectedImagePageState extends State<SelectedImagePage> {
                                 attachment: Attachment(
                                   attachmentType: "Image",
                                   attachmentValue: url,
+                                  fileSize: fileSize,
                                   fileName: fileName,
                                   width: dimensions.$1,
                                   height: dimensions.$2,

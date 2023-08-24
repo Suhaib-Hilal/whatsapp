@@ -6,9 +6,8 @@ import 'package:path_provider/path_provider.dart';
 final firebaseStorageRef = FirebaseStorage.instance.ref();
 
 class FirebaseStorageUtil {
-  static Future<String> uploadFile(String path, File file) async {
-    final taskSnap = await firebaseStorageRef.child(path).putFile(file);
-    return await taskSnap.ref.getDownloadURL();
+  static UploadTask uploadFile(String path, File file)  {
+    return firebaseStorageRef.child(path).putFile(file);
   }
 
   static Future<DownloadTask> downloadFileFromFirebase(
@@ -16,7 +15,7 @@ class FirebaseStorageUtil {
     String name,
   ) async {
     final ref = FirebaseStorage.instance.refFromURL(url);
-    
+
     final Directory directory = await getApplicationDocumentsDirectory();
     final File file = File('${directory.path}/$name');
 

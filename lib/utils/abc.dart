@@ -82,3 +82,12 @@ Future<XFile?> getSelectedImage(String text) async {
   }
   return ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 50);
 }
+
+String getFormattedSize(int sizeInBytes) {
+  final kilobytes = (sizeInBytes / 1024);
+  if (kilobytes >= 500) {
+    return "${(kilobytes / 1024).toStringAsFixed(2)} MB";
+  } else {
+    return "${kilobytes.toStringAsFixed(2)} KB";
+  }
+}
